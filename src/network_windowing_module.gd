@@ -1,5 +1,7 @@
 extends RefCounted
 
+# Stores a bounded, per-key window of delta dictionaries with monotonically increasing sequence numbers.
+
 class NetworkWindowingConfig extends RefCounted:
 	var buffer_size: int
 
@@ -10,41 +12,42 @@ class DeltaEntry extends RefCounted:
 	var sequence_number: int
 	var delta: Dictionary[String, Variant]
 	var timestamp_msec: int
-	var match_id: String
+	var stream_key: String
 
-	func _init(sequence_number: int, delta: Dictionary[String, Variant], match_id: String, timestamp_msec: int) -> void:
+	func _init(sequence_number: int, delta: Dictionary[String, Variant], stream_key: String, timestamp_msec: int) -> void:
 		self.sequence_number = sequence_number
 		self.delta = delta.duplicate(true)
-		self.match_id = match_id
+		self.stream_key = stream_key
 		self.timestamp_msec = timestamp_msec
 
 static var _buffers: Dictionary[String, Array] = {}
-static var _global_sequence: int = 0
+static var _latest_sequences: Dictionary[String, int] = {}
 
 static func append(
 	config: NetworkWindowingConfig,
-	match_id: String,
+	stream_key: String,
 	delta: Dictionary[String, Variant],
 	now_msec: int
 ) -> int:
-	var buffer: Array[DeltaEntry] = _get_or_create_buffer(match_id)
+	var buffer: Array[DeltaEntry] = _get_or_create_buffer(stream_key)
 
-	_global_sequence += 1
-	var entry := DeltaEntry.new(_global_sequence, delta, match_id, now_msec)
+	var next_sequence: int = int(_latest_sequences.get(stream_key, 0)) + 1
+	_latest_sequences[stream_key] = next_sequence
 
+	var entry := DeltaEntry.new(next_sequence, delta, stream_key, now_msec)
 	buffer.append(entry)
 
 	var max_size: int = max(config.buffer_size if config else 0, 0)
 	if max_size > 0 and buffer.size() > max_size:
 		buffer.pop_front()
 
-	return _global_sequence
+	return next_sequence
 
-static func get_since(match_id: String, last_sequence: int) -> Array[DeltaEntry]:
-	if not match_id in _buffers:
+static func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntry]:
+	if not stream_key in _buffers:
 		return []
 
-	var buffer: Array[DeltaEntry] = _buffers[match_id]
+	var buffer: Array[DeltaEntry] = _buffers[stream_key]
 	var result: Array[DeltaEntry] = []
 
 	for entry in buffer:
@@ -53,29 +56,29 @@ static func get_since(match_id: String, last_sequence: int) -> Array[DeltaEntry]
 
 	return result
 
-static func get_latest_sequence(match_id: String) -> int:
-	if not match_id in _buffers:
-		return 0
-
-	var buffer: Array[DeltaEntry] = _buffers[match_id]
-	if buffer.is_empty():
-		return 0
-
-	var last_entry: DeltaEntry = buffer.back()
-	return last_entry.sequence_number
+static func get_latest_sequence(stream_key: String) -> int:
+	return int(_latest_sequences.get(stream_key, 0))
 
 static func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 	var cutoff: int = now_msec - max_age_ms
-	for match_id in _buffers.keys():
-		var buffer: Array[DeltaEntry] = _buffers[match_id]
+	for stream_key: String in _buffers.keys():
+		var buffer: Array[DeltaEntry] = _buffers[stream_key]
 		var pruned_buffer: Array[DeltaEntry] = []
 		for entry in buffer:
 			if entry.timestamp_msec >= cutoff:
 				pruned_buffer.append(entry)
-		_buffers[match_id] = pruned_buffer
+		_buffers[stream_key] = pruned_buffer
 
-static func _get_or_create_buffer(match_id: String) -> Array[DeltaEntry]:
-	if not match_id in _buffers:
+static func clear(stream_key: String) -> void:
+	_buffers.erase(stream_key)
+	_latest_sequences.erase(stream_key)
+
+static func clear_all() -> void:
+	_buffers.clear()
+	_latest_sequences.clear()
+
+static func _get_or_create_buffer(stream_key: String) -> Array[DeltaEntry]:
+	if not stream_key in _buffers:
 		var new_buffer: Array[DeltaEntry] = []
-		_buffers[match_id] = new_buffer
-	return _buffers[match_id]
+		_buffers[stream_key] = new_buffer
+	return _buffers[stream_key]
