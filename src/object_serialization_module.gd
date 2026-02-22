@@ -1,3 +1,4 @@
+class_name ObjectSerializationModule
 extends RefCounted
 
 class ObjectSerializationConfig extends RefCounted:
@@ -17,8 +18,8 @@ var _config: ObjectSerializationConfig = ObjectSerializationConfig.new()
 func configure(config: ObjectSerializationConfig) -> void:
 	_config = config if config else ObjectSerializationConfig.new()
 
-func to_dict(obj: Object) -> Dictionary:
-	var result: Dictionary = {}
+func to_dict(obj: Object) -> Dictionary[String, Variant]:
+	var result: Dictionary[String, Variant] = {}
 	var script_properties: Array[Dictionary] = _get_script_properties(obj)
 
 	for property in script_properties:
@@ -61,7 +62,7 @@ func _serialize_value(value) -> Variant:
 		return value.map(func(item) -> Variant: return _serialize_value(item))
 
 	if value is Object:
-		var has_to_dict: bool = value.get_method_list().any(func(m: Dictionary) -> bool: return m.name == "to_dict")
+		var has_to_dict: bool = value.has_method("to_dict")
 		return value.to_dict() if has_to_dict else to_dict(value)
 
 	return null
@@ -149,7 +150,7 @@ func _deserialize_value(value, property_info: Dictionary) -> Variant:
 			var script = load(script_path)
 			if script:
 				var script_instance = script.new()
-				var has_from_dict: bool = script_instance.get_method_list().any(func(m: Dictionary) -> bool: return m.name == "from_dict")
+				var has_from_dict: bool = script_instance.has_method("from_dict")
 				return script.from_dict(value) if has_from_dict else from_dict(value, script)
 		return null
 
@@ -254,9 +255,4 @@ func _resolve_script_path(p_class_name: String) -> String:
 		var resolved_path: Variant = _config.class_path_resolver.call(p_class_name)
 		if resolved_path is String:
 			return resolved_path
-
-	var script_classes: Array = ProjectSettings.get_setting("_global_script_classes", [])
-	for script_class in script_classes:
-		if script_class.get("class", "") == p_class_name:
-			return script_class.get("path", "")
 	return ""

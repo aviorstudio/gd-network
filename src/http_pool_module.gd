@@ -1,3 +1,4 @@
+class_name HttpPoolModule
 extends RefCounted
 
 class PoolEntry extends RefCounted:

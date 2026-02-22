@@ -1,3 +1,4 @@
+class_name ErrorCatalogModule
 extends RefCounted
 
 # Game-agnostic error catalog for network/transport layers.
@@ -20,7 +21,7 @@ static func _entry(message: String, delay: float = 0.0, severity: int = 1) -> Di
 		"severity": severity
 	}
 
-var _MAP: Dictionary[String, Dictionary] = {
+static var DEFAULT_CATALOG: Dictionary[String, Dictionary] = {
 	NETWORK_TIMEOUT: _entry("Request timed out", 1.0, 2),
 	NETWORK_ERROR: _entry("Network error, please try again", 1.0, 2),
 	SERVER_ERROR: _entry("Server error, please try again", 1.0, 2),
@@ -32,33 +33,33 @@ var _MAP: Dictionary[String, Dictionary] = {
 	EMPTY_RESPONSE: _entry("Empty response", 0.0, 2),
 }
 
-func register_error(code: String, message: String, delay: float = 0.0, severity: int = 1) -> void:
+static func register_error(catalog: Dictionary[String, Dictionary], code: String, message: String, delay: float = 0.0, severity: int = 1) -> void:
 	if code.is_empty():
 		return
-	_MAP[code] = _entry(message, delay, severity)
+	catalog[code] = _entry(message, delay, severity)
 
-func register_errors(entries: Dictionary[String, Dictionary]) -> void:
+static func register_errors(catalog: Dictionary[String, Dictionary], entries: Dictionary[String, Dictionary]) -> void:
 	for code: String in entries:
 		if code.is_empty():
 			continue
 		var entry_value: Dictionary = entries.get(code, {})
 		if entry_value.is_empty():
 			continue
-		_MAP[code] = entry_value.duplicate(true)
+		catalog[code] = entry_value.duplicate(true)
 
-func resolve_message(code_or_message: String) -> String:
-	if _MAP.has(code_or_message):
-		return get_safe_message(code_or_message)
+static func resolve_message(catalog: Dictionary[String, Dictionary], code_or_message: String) -> String:
+	if catalog.has(code_or_message):
+		return get_safe_message(catalog, code_or_message)
 	return code_or_message
 
-func get_safe_message(key: String) -> String:
-	var entry: Dictionary = _MAP.get(key, {})
+static func get_safe_message(catalog: Dictionary[String, Dictionary], key: String) -> String:
+	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
 		return str(entry.get("message", "An error occurred"))
 	return "An error occurred"
 
-func get_retry_delay_s(key: String, attempt: int = 1) -> float:
-	var entry: Dictionary = _MAP.get(key, {})
+static func get_retry_delay_s(catalog: Dictionary[String, Dictionary], key: String, attempt: int = 1) -> float:
+	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
 		var base_delay: float = float(entry.get("retry_delay_s", 0.0))
 		if base_delay > 0.0 and key == RATE_LIMITED:
@@ -66,14 +67,16 @@ func get_retry_delay_s(key: String, attempt: int = 1) -> float:
 		return base_delay
 	return 1.0
 
-func get_severity(key: String) -> int:
-	var entry: Dictionary = _MAP.get(key, {})
+static func get_severity(catalog: Dictionary[String, Dictionary], key: String) -> int:
+	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
 		return int(entry.get("severity", 1))
 	return 1
 
 # Compatibility helper for inputs like "http_404".
-func map_http_error(error_message: String) -> String:
+static func map_http_error(catalog: Dictionary[String, Dictionary], error_message: String) -> String:
+	if catalog.is_empty():
+		pass
 	if error_message.begins_with("http_"):
 		var parts: PackedStringArray = error_message.split("_", false, 2)
 		if parts.size() >= 2:

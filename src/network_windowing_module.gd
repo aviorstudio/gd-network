@@ -1,3 +1,4 @@
+class_name NetworkWindowingModule
 extends RefCounted
 
 # Stores a bounded, per-key window of delta dictionaries with monotonically increasing sequence numbers.

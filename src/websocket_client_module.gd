@@ -1,6 +1,7 @@
+class_name WebSocketClientModule
 extends Node
 
-const RetryBackoffModule = preload("res://addons/@aviorstudio_gd-network/src/retry_backoff_module.gd")
+const RetryBackoffModule = preload("retry_backoff_module.gd")
 
 signal connected()
 signal disconnected()
