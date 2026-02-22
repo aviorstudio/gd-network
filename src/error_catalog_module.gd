@@ -20,7 +20,7 @@ static func _entry(message: String, delay: float = 0.0, severity: int = 1) -> Di
 		"severity": severity
 	}
 
-static var _MAP: Dictionary[String, Dictionary] = {
+var _MAP: Dictionary[String, Dictionary] = {
 	NETWORK_TIMEOUT: _entry("Request timed out", 1.0, 2),
 	NETWORK_ERROR: _entry("Network error, please try again", 1.0, 2),
 	SERVER_ERROR: _entry("Server error, please try again", 1.0, 2),
@@ -32,12 +32,12 @@ static var _MAP: Dictionary[String, Dictionary] = {
 	EMPTY_RESPONSE: _entry("Empty response", 0.0, 2),
 }
 
-static func register_error(code: String, message: String, delay: float = 0.0, severity: int = 1) -> void:
+func register_error(code: String, message: String, delay: float = 0.0, severity: int = 1) -> void:
 	if code.is_empty():
 		return
 	_MAP[code] = _entry(message, delay, severity)
 
-static func register_errors(entries: Dictionary[String, Dictionary]) -> void:
+func register_errors(entries: Dictionary[String, Dictionary]) -> void:
 	for code: String in entries:
 		if code.is_empty():
 			continue
@@ -46,18 +46,18 @@ static func register_errors(entries: Dictionary[String, Dictionary]) -> void:
 			continue
 		_MAP[code] = entry_value.duplicate(true)
 
-static func resolve_message(code_or_message: String) -> String:
+func resolve_message(code_or_message: String) -> String:
 	if _MAP.has(code_or_message):
 		return get_safe_message(code_or_message)
 	return code_or_message
 
-static func get_safe_message(key: String) -> String:
+func get_safe_message(key: String) -> String:
 	var entry: Dictionary = _MAP.get(key, {})
 	if not entry.is_empty():
 		return str(entry.get("message", "An error occurred"))
 	return "An error occurred"
 
-static func get_retry_delay_s(key: String, attempt: int = 1) -> float:
+func get_retry_delay_s(key: String, attempt: int = 1) -> float:
 	var entry: Dictionary = _MAP.get(key, {})
 	if not entry.is_empty():
 		var base_delay: float = float(entry.get("retry_delay_s", 0.0))
@@ -66,14 +66,14 @@ static func get_retry_delay_s(key: String, attempt: int = 1) -> float:
 		return base_delay
 	return 1.0
 
-static func get_severity(key: String) -> int:
+func get_severity(key: String) -> int:
 	var entry: Dictionary = _MAP.get(key, {})
 	if not entry.is_empty():
 		return int(entry.get("severity", 1))
 	return 1
 
 # Compatibility helper for inputs like "http_404".
-static func map_http_error(error_message: String) -> String:
+func map_http_error(error_message: String) -> String:
 	if error_message.begins_with("http_"):
 		var parts: PackedStringArray = error_message.split("_", false, 2)
 		if parts.size() >= 2:

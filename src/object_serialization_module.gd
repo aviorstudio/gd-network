@@ -12,12 +12,12 @@ const IGNORED_STORAGE_PROPERTY_NAMES: Array[String] = [
 	"Script Variables"
 ]
 
-static var _config: ObjectSerializationConfig = ObjectSerializationConfig.new()
+var _config: ObjectSerializationConfig = ObjectSerializationConfig.new()
 
-static func configure(config: ObjectSerializationConfig) -> void:
+func configure(config: ObjectSerializationConfig) -> void:
 	_config = config if config else ObjectSerializationConfig.new()
 
-static func to_dict(obj: Object) -> Dictionary:
+func to_dict(obj: Object) -> Dictionary:
 	var result: Dictionary = {}
 	var script_properties: Array[Dictionary] = _get_script_properties(obj)
 
@@ -30,7 +30,7 @@ static func to_dict(obj: Object) -> Dictionary:
 
 	return result
 
-static func from_dict(dict: Dictionary, type: GDScript) -> Object:
+func from_dict(dict: Dictionary, type: GDScript) -> Object:
 	var obj: Object = type.new()
 
 	for key in dict.keys():
@@ -44,7 +44,7 @@ static func from_dict(dict: Dictionary, type: GDScript) -> Object:
 
 	return obj
 
-static func _serialize_value(value) -> Variant:
+func _serialize_value(value) -> Variant:
 	if value is int or value is float or value is String or value is bool:
 		return value
 
@@ -66,7 +66,7 @@ static func _serialize_value(value) -> Variant:
 
 	return null
 
-static func _deserialize_value(value, property_info: Dictionary) -> Variant:
+func _deserialize_value(value, property_info: Dictionary) -> Variant:
 	var property_type: int = property_info.type
 
 	if property_type == TYPE_INT:
@@ -155,14 +155,14 @@ static func _deserialize_value(value, property_info: Dictionary) -> Variant:
 
 	return null
 
-static func _get_property_info(obj: Object, property_name: String) -> Dictionary:
+func _get_property_info(obj: Object, property_name: String) -> Dictionary:
 	var properties: Array[Dictionary] = obj.get_property_list()
 	for prop in properties:
 		if prop.get("name", "") == property_name:
 			return prop
 	return {}
 
-static func serialize_slot_keyed_dict(data: Dictionary) -> Dictionary:
+func serialize_slot_keyed_dict(data: Dictionary) -> Dictionary:
 	var result: Dictionary = {}
 	for slot in data:
 		var obj = data[slot]
@@ -170,7 +170,7 @@ static func serialize_slot_keyed_dict(data: Dictionary) -> Dictionary:
 			result[str(slot)] = obj.to_dict()
 	return result
 
-static func deserialize_slot_keyed_dict(serialized: Dictionary, type_hint: GDScript) -> Dictionary:
+func deserialize_slot_keyed_dict(serialized: Dictionary, type_hint: GDScript) -> Dictionary:
 	var result: Dictionary = {}
 	for slot_str in serialized:
 		var slot: int = int(slot_str)
@@ -181,7 +181,7 @@ static func deserialize_slot_keyed_dict(serialized: Dictionary, type_hint: GDScr
 			result[slot] = obj_data
 	return result
 
-static func deep_duplicate(obj: Object, type: GDScript) -> Object:
+func deep_duplicate(obj: Object, type: GDScript) -> Object:
 	var new_obj: Object = type.new()
 	var script_properties: Array[Dictionary] = _get_script_properties(obj)
 
@@ -196,7 +196,7 @@ static func deep_duplicate(obj: Object, type: GDScript) -> Object:
 
 	return new_obj
 
-static func _duplicate_value(value, property_type: int) -> Variant:
+func _duplicate_value(value, property_type: int) -> Variant:
 	if value is int or value is float or value is String or value is bool:
 		return value
 
@@ -224,7 +224,7 @@ static func _duplicate_value(value, property_type: int) -> Variant:
 
 	return null
 
-static func _get_script_properties(obj: Object) -> Array[Dictionary]:
+func _get_script_properties(obj: Object) -> Array[Dictionary]:
 	var properties: Array[Dictionary] = []
 	if obj == null:
 		return properties
@@ -242,14 +242,14 @@ static func _get_script_properties(obj: Object) -> Array[Dictionary]:
 		properties.append(prop)
 	return properties
 
-static func _has_property(obj: Object, property_name: String) -> bool:
+func _has_property(obj: Object, property_name: String) -> bool:
 	var property_list: Array[Dictionary] = obj.get_property_list()
 	for prop in property_list:
 		if prop.get("name", "") == property_name:
 			return true
 	return false
 
-static func _resolve_script_path(p_class_name: String) -> String:
+func _resolve_script_path(p_class_name: String) -> String:
 	if _config.class_path_resolver.is_valid():
 		var resolved_path: Variant = _config.class_path_resolver.call(p_class_name)
 		if resolved_path is String:
