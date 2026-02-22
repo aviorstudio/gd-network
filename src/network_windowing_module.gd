@@ -20,10 +20,10 @@ class DeltaEntry extends RefCounted:
 		self.stream_key = stream_key
 		self.timestamp_msec = timestamp_msec
 
-static var _buffers: Dictionary[String, Array] = {}
-static var _latest_sequences: Dictionary[String, int] = {}
+var _buffers: Dictionary[String, Array] = {}
+var _latest_sequences: Dictionary[String, int] = {}
 
-static func append(
+func append(
 	config: NetworkWindowingConfig,
 	stream_key: String,
 	delta: Dictionary[String, Variant],
@@ -43,7 +43,7 @@ static func append(
 
 	return next_sequence
 
-static func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntry]:
+func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntry]:
 	if not stream_key in _buffers:
 		return []
 
@@ -56,10 +56,10 @@ static func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntr
 
 	return result
 
-static func get_latest_sequence(stream_key: String) -> int:
+func get_latest_sequence(stream_key: String) -> int:
 	return int(_latest_sequences.get(stream_key, 0))
 
-static func prune_older_than(now_msec: int, max_age_ms: int) -> void:
+func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 	var cutoff: int = now_msec - max_age_ms
 	for stream_key: String in _buffers.keys():
 		var buffer: Array[DeltaEntry] = _buffers[stream_key]
@@ -69,15 +69,15 @@ static func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 				pruned_buffer.append(entry)
 		_buffers[stream_key] = pruned_buffer
 
-static func clear(stream_key: String) -> void:
+func clear(stream_key: String) -> void:
 	_buffers.erase(stream_key)
 	_latest_sequences.erase(stream_key)
 
-static func clear_all() -> void:
+func clear_all() -> void:
 	_buffers.clear()
 	_latest_sequences.clear()
 
-static func _get_or_create_buffer(stream_key: String) -> Array[DeltaEntry]:
+func _get_or_create_buffer(stream_key: String) -> Array[DeltaEntry]:
 	if not stream_key in _buffers:
 		var new_buffer: Array[DeltaEntry] = []
 		_buffers[stream_key] = new_buffer
