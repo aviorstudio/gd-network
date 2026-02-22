@@ -5,11 +5,13 @@ class RateLimitConfig extends RefCounted:
 	var max_tokens: float
 	var tokens_per_second: float
 	var consume_amount: float
+	var burst_tokens: float
 
-	func _init(max_tokens: float, tokens_per_second: float, consume_amount: float) -> void:
+	func _init(max_tokens: float, tokens_per_second: float, consume_amount: float, burst_tokens: float = 0.0) -> void:
 		self.max_tokens = max_tokens
 		self.tokens_per_second = tokens_per_second
 		self.consume_amount = consume_amount
+		self.burst_tokens = burst_tokens
 
 class RateLimitState extends RefCounted:
 	var tokens: float
@@ -36,8 +38,9 @@ static func consume(
 	now_msec: int
 ) -> RateLimitResult:
 	var resolved_config: RateLimitConfig = config if config else RateLimitConfig.new(0.0, 0.0, 0.0)
-	var resolved_state: RateLimitState = _ensure_state(state, resolved_config.max_tokens, now_msec)
-	_refill(resolved_state, now_msec, resolved_config.max_tokens, resolved_config.tokens_per_second)
+	var token_capacity: float = resolved_config.max_tokens + maxf(resolved_config.burst_tokens, 0.0)
+	var resolved_state: RateLimitState = _ensure_state(state, token_capacity, now_msec)
+	_refill(resolved_state, now_msec, token_capacity, resolved_config.tokens_per_second)
 
 	var allowed: bool = resolved_state.can_consume(resolved_config.consume_amount)
 	if allowed:
