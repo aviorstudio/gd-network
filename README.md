@@ -1,6 +1,6 @@
 # gd-network
 
-Game-agnostic network primitives for Godot 4 (HTTP helpers, retry/backoff, rate limiting, windowing, serialization, and error catalog).
+Game-agnostic network primitives for Godot 4 (HTTP helpers, retry/backoff, rate limiting, windowing, and error catalog).
 
 - Package: `@aviorstudio/gd-network`
 - Godot: `4.x` (tested on `4.4`)
@@ -19,7 +19,6 @@ Place this folder under `res://addons/<addon-dir>/` (for example `res://addons/@
 - `src/retry_backoff_module.gd`: exponential backoff helper.
 - `src/rate_limit_module.gd`: token bucket rate limiter.
 - `src/network_windowing_module.gd`: per-key delta buffers with sequence numbers + pruning.
-- `src/object_serialization_module.gd`: object ↔ dictionary serialization helpers.
 - `src/error_catalog_module.gd`: error codes/messages + retry metadata (extendable).
 
 ## Usage
