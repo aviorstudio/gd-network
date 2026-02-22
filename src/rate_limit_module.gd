@@ -1,3 +1,4 @@
+class_name RateLimitModule
 extends RefCounted
 
 class RateLimitConfig extends RefCounted:

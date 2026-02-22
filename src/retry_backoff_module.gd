@@ -1,3 +1,4 @@
+class_name RetryBackoffModule
 extends RefCounted
 
 class RetryConfig extends RefCounted:
