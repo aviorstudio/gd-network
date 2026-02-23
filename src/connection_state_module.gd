@@ -40,7 +40,7 @@ func transition_to(new_state: ConnectionState) -> bool:
 	return true
 
 ## Returns true when transport connection is established.
-func is_connected() -> bool:
+func is_transport_connected() -> bool:
 	return _state == ConnectionState.CONNECTED or _state == ConnectionState.AUTHENTICATING or _state == ConnectionState.AUTHENTICATED
 
 ## Returns true when authentication has completed.

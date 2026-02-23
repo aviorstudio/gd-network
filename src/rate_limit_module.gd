@@ -24,6 +24,7 @@ class RateLimitState extends RefCounted:
 		self.tokens = tokens
 		self.last_update_msec = last_update_msec
 
+	## Returns whether the bucket has enough tokens for the requested cost.
 	func can_consume(cost: float) -> bool:
 		return tokens >= cost
 

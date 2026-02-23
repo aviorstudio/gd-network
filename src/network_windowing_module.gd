@@ -27,6 +27,7 @@ class DeltaEntry extends RefCounted:
 var _buffers: Dictionary[String, Array] = {}
 var _latest_sequences: Dictionary[String, int] = {}
 
+## Appends a delta for a stream key and returns its assigned sequence number.
 func append(
 	config: NetworkWindowingConfig,
 	stream_key: String,
@@ -47,6 +48,7 @@ func append(
 
 	return next_sequence
 
+## Returns all deltas with sequence numbers greater than the provided cursor.
 func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntry]:
 	if not stream_key in _buffers:
 		return []
@@ -60,9 +62,11 @@ func get_since(stream_key: String, last_sequence: int) -> Array[DeltaEntry]:
 
 	return result
 
+## Returns the latest sequence number seen for a stream key.
 func get_latest_sequence(stream_key: String) -> int:
 	return int(_latest_sequences.get(stream_key, 0))
 
+## Removes buffered deltas older than the configured age threshold.
 func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 	var cutoff: int = now_msec - max_age_ms
 	for stream_key: String in _buffers.keys():
@@ -73,10 +77,12 @@ func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 				pruned_buffer.append(entry)
 		_buffers[stream_key] = pruned_buffer
 
+## Clears buffered deltas and sequence counters for a stream key.
 func clear(stream_key: String) -> void:
 	_buffers.erase(stream_key)
 	_latest_sequences.erase(stream_key)
 
+## Clears all stream buffers and sequence counters.
 func clear_all() -> void:
 	_buffers.clear()
 	_latest_sequences.clear()

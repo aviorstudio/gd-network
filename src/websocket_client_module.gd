@@ -27,9 +27,11 @@ var _active: bool = false
 var state: ConnectionState = ConnectionState.DISCONNECTED
 var reconnect_count: int = 0
 
+## Initializes processing in an idle state until `start()` is called.
 func _ready() -> void:
 	set_process(false)
 
+## Starts websocket connection attempts for the provided URL.
 func start(url: String, headers: PackedStringArray = PackedStringArray(), retry_config: RetryBackoffModule.RetryConfig = null) -> void:
 	stop()
 	_url = url
@@ -43,6 +45,7 @@ func start(url: String, headers: PackedStringArray = PackedStringArray(), retry_
 	set_process(true)
 	_attempt_connect()
 
+## Stops active websocket processing and closes any current socket.
 func stop() -> void:
 	_active = false
 	_connected = false
@@ -54,9 +57,11 @@ func stop() -> void:
 	set_process(false)
 	state = ConnectionState.DISCONNECTED
 
+## Returns true when the websocket is open and ready for send calls.
 func is_socket_open() -> bool:
 	return _connected and _ws != null and _ws.get_ready_state() == WebSocketPeer.STATE_OPEN
 
+## Sends a UTF-8 text message when the socket is open.
 func send_text(message: String) -> bool:
 	if not is_socket_open():
 		return false
