@@ -1,6 +1,8 @@
+## Retry scheduling helpers with exponential backoff and optional jitter.
 class_name RetryBackoffModule
 extends RefCounted
 
+## Retry scheduling configuration.
 class RetryConfig extends RefCounted:
 	var base_delay_ms: int
 	var multiplier: float
@@ -21,6 +23,7 @@ class RetryConfig extends RefCounted:
 		self.max_delay_ms = max_delay_ms
 		self.jitter_callable = jitter_callable
 
+## Mutable retry attempt state.
 class RetryState extends RefCounted:
 	var attempt: int
 	var next_retry_ms: int
@@ -31,6 +34,7 @@ class RetryState extends RefCounted:
 		self.next_retry_ms = next_retry_ms
 		self.exhausted = exhausted
 
+## Computes next retry state from current state and config.
 static func next_retry(now_msec: int, state: RetryState, config: RetryConfig) -> RetryState:
 	var next_attempt: int = state.attempt + 1
 

@@ -1,14 +1,17 @@
+## Maintains bounded ordered delta windows by stream key.
 class_name NetworkWindowingModule
 extends RefCounted
 
 # Stores a bounded, per-key window of delta dictionaries with monotonically increasing sequence numbers.
 
+## Window buffer configuration.
 class NetworkWindowingConfig extends RefCounted:
 	var buffer_size: int
 
 	func _init(buffer_size: int) -> void:
 		self.buffer_size = buffer_size
 
+## Delta entry payload stored in stream windows.
 class DeltaEntry extends RefCounted:
 	var sequence_number: int
 	var delta: Dictionary[String, Variant]
