@@ -1,3 +1,4 @@
+## Game-agnostic error catalog helpers for network/transport layers.
 class_name ErrorCatalogModule
 extends RefCounted
 
@@ -14,6 +15,7 @@ const PARSE_ERROR := "parse_error"
 const REQUEST_FAILED := "request_failed"
 const EMPTY_RESPONSE := "empty_response"
 
+## Builds a normalized error metadata entry.
 static func _entry(message: String, delay: float = 0.0, severity: int = 1) -> Dictionary[String, Variant]:
 	return {
 		"message": message,
@@ -33,11 +35,13 @@ static var DEFAULT_CATALOG: Dictionary[String, Dictionary] = {
 	EMPTY_RESPONSE: _entry("Empty response", 0.0, 2),
 }
 
+## Registers a single catalog entry.
 static func register_error(catalog: Dictionary[String, Dictionary], code: String, message: String, delay: float = 0.0, severity: int = 1) -> void:
 	if code.is_empty():
 		return
 	catalog[code] = _entry(message, delay, severity)
 
+## Registers multiple catalog entries.
 static func register_errors(catalog: Dictionary[String, Dictionary], entries: Dictionary[String, Dictionary]) -> void:
 	for code: String in entries:
 		if code.is_empty():
@@ -47,17 +51,20 @@ static func register_errors(catalog: Dictionary[String, Dictionary], entries: Di
 			continue
 		catalog[code] = entry_value.duplicate(true)
 
+## Resolves an error code to a safe message, or returns passthrough input.
 static func resolve_message(catalog: Dictionary[String, Dictionary], code_or_message: String) -> String:
 	if catalog.has(code_or_message):
 		return get_safe_message(catalog, code_or_message)
 	return code_or_message
 
+## Returns a user-safe message for a catalog key.
 static func get_safe_message(catalog: Dictionary[String, Dictionary], key: String) -> String:
 	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
 		return str(entry.get("message", "An error occurred"))
 	return "An error occurred"
 
+## Returns retry delay in seconds, including exponential behavior for rate limits.
 static func get_retry_delay_s(catalog: Dictionary[String, Dictionary], key: String, attempt: int = 1) -> float:
 	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
@@ -67,6 +74,7 @@ static func get_retry_delay_s(catalog: Dictionary[String, Dictionary], key: Stri
 		return base_delay
 	return 1.0
 
+## Returns severity level for a catalog key.
 static func get_severity(catalog: Dictionary[String, Dictionary], key: String) -> int:
 	var entry: Dictionary = catalog.get(key, {})
 	if not entry.is_empty():
@@ -74,6 +82,7 @@ static func get_severity(catalog: Dictionary[String, Dictionary], key: String) -
 	return 1
 
 # Compatibility helper for inputs like "http_404".
+## Maps transport/http errors to stable catalog keys.
 static func map_http_error(catalog: Dictionary[String, Dictionary], error_message: String) -> String:
 	if catalog.is_empty():
 		pass

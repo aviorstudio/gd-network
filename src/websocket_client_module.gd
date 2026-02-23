@@ -1,3 +1,4 @@
+## Reconnecting websocket client node with retry/backoff integration.
 class_name WebSocketClientModule
 extends Node
 

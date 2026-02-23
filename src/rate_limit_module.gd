@@ -1,6 +1,8 @@
+## Token-bucket rate limiting primitives.
 class_name RateLimitModule
 extends RefCounted
 
+## Rate limit configuration values.
 class RateLimitConfig extends RefCounted:
 	var max_tokens: float
 	var tokens_per_second: float
@@ -13,6 +15,7 @@ class RateLimitConfig extends RefCounted:
 		self.consume_amount = consume_amount
 		self.burst_tokens = burst_tokens
 
+## Mutable bucket state container.
 class RateLimitState extends RefCounted:
 	var tokens: float
 	var last_update_msec: int
@@ -24,6 +27,7 @@ class RateLimitState extends RefCounted:
 	func can_consume(cost: float) -> bool:
 		return tokens >= cost
 
+## Result of a consume attempt.
 class RateLimitResult extends RefCounted:
 	var state: RateLimitState
 	var allowed: bool
@@ -32,6 +36,7 @@ class RateLimitResult extends RefCounted:
 		self.state = state
 		self.allowed = allowed
 
+## Consumes tokens and returns allowance status with updated state.
 static func consume(
 	config: RateLimitConfig,
 	state: RateLimitState,
@@ -48,6 +53,7 @@ static func consume(
 
 	return RateLimitResult.new(resolved_state, allowed)
 
+## Ensures a non-null rate limit state.
 static func _ensure_state(
 	state: RateLimitState,
 	max_tokens: float,
@@ -57,6 +63,7 @@ static func _ensure_state(
 		return state
 	return RateLimitState.new(max_tokens, now_msec)
 
+## Refills tokens based on elapsed time and configured refill rate.
 static func _refill(
 	state: RateLimitState,
 	now_msec: int,
