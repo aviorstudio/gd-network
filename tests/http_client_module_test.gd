@@ -1,8 +1,9 @@
 extends SceneTree
 
-const HttpClientModule = preload("res://src/http_client_module.gd")
-
 var _last_payload: Dictionary[String, Variant] = {}
+
+func _load_http_client_module() -> Variant:
+	return load("res://src/http_client_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -19,8 +20,12 @@ func _initialize() -> void:
 	quit(1)
 
 func _test_missing_setup_returns_error(failures: Array[String]) -> void:
+	var http_client_module: Variant = _load_http_client_module()
+	if http_client_module == null:
+		failures.append("Failed to load res://src/http_client_module.gd")
+		return
 	_last_payload = {}
-	var module := HttpClientModule.new()
+	var module = http_client_module.new()
 	var request_id: String = module.get_json("/health", Callable(self, "_capture_payload"))
 
 	if request_id != "1":
@@ -31,17 +36,21 @@ func _test_missing_setup_returns_error(failures: Array[String]) -> void:
 		failures.append("Expected request_failed error key when setup is missing")
 
 func _test_error_mapper_applied(failures: Array[String]) -> void:
+	var http_client_module: Variant = _load_http_client_module()
+	if http_client_module == null:
+		failures.append("Failed to load res://src/http_client_module.gd")
+		return
 	var owner := Node.new()
 	root.add_child(owner)
 
-	var config := HttpClientModule.HttpClientConfig.new()
+	var config = http_client_module.HttpClientConfig.new()
 	config.base_url = "https://example.com"
 	config.error_mapper = func(status_code: int) -> String:
 		return "mapped_%d" % status_code
 
-	var module := HttpClientModule.new()
+	var module = http_client_module.new()
 	module.setup(owner, config)
-	var response: HttpClientModule.HttpResponse = module._build_response(404, PackedByteArray())
+	var response = module._build_response(404, PackedByteArray())
 
 	if response.error_key != "mapped_404":
 		failures.append("Expected error mapper to set mapped_404 error_key")
