@@ -78,8 +78,8 @@ func _process(_delta: float) -> void:
 		_retry_connect_if_due(now_ms)
 		return
 	_ws.poll()
-	var state: WebSocketPeer.State = _ws.get_ready_state()
-	if state == WebSocketPeer.STATE_OPEN:
+	var ws_state: WebSocketPeer.State = _ws.get_ready_state()
+	if ws_state == WebSocketPeer.STATE_OPEN:
 		if not _connected:
 			_connected = true
 			self.state = ConnectionState.CONNECTED
@@ -87,7 +87,7 @@ func _process(_delta: float) -> void:
 			connected.emit()
 		while _ws.get_available_packet_count() > 0:
 			message_received.emit(_ws.get_packet())
-	elif state == WebSocketPeer.STATE_CLOSED:
+	elif ws_state == WebSocketPeer.STATE_CLOSED:
 		var was_connected: bool = _connected
 		_connected = false
 		self.state = ConnectionState.DISCONNECTED
