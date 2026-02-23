@@ -1,43 +1,42 @@
 # gd-network
 
-Game-agnostic network primitives for Godot 4 (HTTP helpers, retry/backoff, rate limiting, windowing, and error catalog).
+Network primitives for Godot 4 including pooling, retry/backoff, rate limiting, and delta windowing.
 
-- Package: `@aviorstudio/gd-network`
-- Godot: `4.x` (tested on `4.4`)
+## Installation
 
-## Install
+### Via gdpm
+`gdpm install @aviorstudio/gd-network`
 
-Place this folder under `res://addons/<addon-dir>/` (for example `res://addons/@aviorstudio_gd-network/`).
+### Manual
+Copy this directory into `addons/@aviorstudio_gd-network/` and enable the plugin.
 
-- With `gdpm`: install/link into your project's `addons/`.
-- Manually: copy or symlink this repo folder into `res://addons/<addon-dir>/`.
-
-## Files
-
-- `plugin.cfg` / `plugin.gd`: editor plugin entry (no runtime behavior).
-- `src/http_pool_module.gd`: pooled `HTTPRequest` nodes.
-- `src/retry_backoff_module.gd`: exponential backoff helper.
-- `src/rate_limit_module.gd`: token bucket rate limiter.
-- `src/network_windowing_module.gd`: per-key delta buffers with sequence numbers + pruning.
-- `src/error_catalog_module.gd`: error codes/messages + retry metadata (extendable).
-
-## Usage
-
-Preload the script you need:
+## Quick Start
 
 ```gdscript
-const RetryBackoff = preload("res://addons/<addon-dir>/src/retry_backoff_module.gd")
+const RetryBackoffModule = preload("res://addons/@aviorstudio_gd-network/src/retry_backoff_module.gd")
 
-var state := RetryBackoff.RetryState.new()
-var config := RetryBackoff.RetryConfig.new(250, 2.0, 5, 5000)
-state = RetryBackoff.next_retry(Time.get_ticks_msec(), state, config)
+var state := RetryBackoffModule.RetryState.new()
+var config := RetryBackoffModule.RetryConfig.new(250, 2.0, 5, 5000)
+state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 ```
+
+## API Reference
+
+- `HttpPoolModule`: acquire/release pooled `HTTPRequest` instances.
+- `RetryBackoffModule`: deterministic retry scheduling primitives.
+- `RateLimitModule`: token-bucket request limiting.
+- `NetworkWindowingModule`: append/get/prune ordered delta buffers.
+- `ErrorCatalogModule`: reusable network error code and metadata catalog.
+- `WebSocketClientModule`: reconnecting websocket wrapper node.
 
 ## Configuration
 
-None (all behavior is configured via function parameters).
+No project settings are required.
 
-## Notes
+## Testing
 
-- Web exports: `HttpPoolModule` disables threads (`HTTPRequest.use_threads = false`).
-- This addon intentionally contains no game-specific API; extend `ErrorCatalogModule` at runtime with `register_error(...)` / `register_errors(...)` when needed.
+`./run_tests.sh`
+
+## License
+
+MIT
