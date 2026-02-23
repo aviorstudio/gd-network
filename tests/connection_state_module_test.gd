@@ -45,7 +45,7 @@ func _test_transition_rules(failures: Array[String]) -> void:
 	if not module.transition_to(connection_state_module.ConnectionState.AUTHENTICATED):
 		failures.append("Expected AUTHENTICATING->AUTHENTICATED transition to succeed")
 
-	if not module.is_transport_connected():
+	if not module.is_connection_active():
 		failures.append("Expected AUTHENTICATED state to report connected")
 	if not bool(module.call("is_authenticated")):
 		failures.append("Expected AUTHENTICATED state to report authenticated")
@@ -71,7 +71,7 @@ func _test_reset_and_callbacks(failures: Array[String]) -> void:
 
 	if module.get_state() != connection_state_module.ConnectionState.DISCONNECTED:
 		failures.append("Expected reset to force DISCONNECTED state")
-	if module.is_transport_connected():
+	if module.is_connection_active():
 		failures.append("Expected DISCONNECTED state to report not connected")
 	if bool(module.call("is_authenticated")):
 		failures.append("Expected DISCONNECTED state to report not authenticated")
