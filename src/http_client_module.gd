@@ -2,6 +2,7 @@
 class_name HttpClientModule
 extends RefCounted
 
+const HttpPoolModule = preload("http_pool_module.gd")
 const HEADER_CONTENT_TYPE_JSON: String = "Content-Type: application/json"
 const HEADER_ACCEPT_JSON: String = "Accept: application/json"
 const ERROR_REQUEST_FAILED: String = "request_failed"
@@ -30,7 +31,8 @@ class RequestEntry extends RefCounted:
 var _owner: Node = null
 var _config: HttpClientConfig = HttpClientConfig.new()
 var _pending_requests: Dictionary[String, RequestEntry] = {}
-var _native_requests: Dictionary[String, HTTPRequest] = {}
+var _native_requests: Dictionary[String, HttpPoolModule.PoolEntry] = {}
+var _pool: Array[HttpPoolModule.PoolEntry] = []
 var _request_counter: int = 0
 var _js_callback: JavaScriptObject = null
 
@@ -168,16 +170,16 @@ func _on_web_request_timeout(request_id: String) -> void:
 	_finish_request_error(request_id, entry, ERROR_REQUEST_FAILED)
 
 func _begin_native_request(request_id: String, url: String, method: HTTPClient.Method, headers: PackedStringArray, body: String, callback: Callable) -> void:
-	var request: HTTPRequest = HTTPRequest.new()
-	request.use_threads = true
-	request.timeout = _config.default_timeout_s
-	_owner.add_child(request)
-	_native_requests[request_id] = request
-	request.request_completed.connect(_on_native_request_completed.bind(request_id, callback), CONNECT_ONE_SHOT)
+	var entry: HttpPoolModule.PoolEntry = HttpPoolModule.acquire_request(_owner, _pool, _config.default_timeout_s)
+	entry.callback = callback
+	entry.request_id = request_id
+	var request: HTTPRequest = entry.node
+	_native_requests[request_id] = entry
+	request.request_completed.connect(_on_native_request_completed.bind(request_id), CONNECT_ONE_SHOT)
 	var err: int = request.request(url, headers, method, body)
 	if err != OK:
 		_native_requests.erase(request_id)
-		request.queue_free()
+		HttpPoolModule.release_request(entry)
 		_send_error(callback, request_id, 0, ERROR_REQUEST_FAILED)
 
 func _handle_web_response(request_id: String, entry: RequestEntry, result_json: String) -> void:
@@ -197,16 +199,30 @@ func _handle_web_response(request_id: String, entry: RequestEntry, result_json: 
 	var response: HttpResponse = _build_response(status_code, body_text.to_utf8_buffer())
 	entry.callback.call(_response_to_dict(response))
 
-func _on_native_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request_id: String, callback: Callable) -> void:
-	var request: HTTPRequest = _native_requests.get(request_id, null)
-	if request:
-		request.queue_free()
-		_native_requests.erase(request_id)
+func _on_native_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request_id: String) -> void:
+	var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)
+	if entry == null:
+		return
+	_native_requests.erase(request_id)
+	var callback: Callable = entry.callback
+	HttpPoolModule.release_request(entry)
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_send_error(callback, request_id, response_code, _map_error_key(response_code, ERROR_REQUEST_FAILED))
 		return
 	var response: HttpResponse = _build_response(response_code, body)
 	callback.call(_response_to_dict(response))
+
+func cleanup() -> void:
+	for request_id in _native_requests.keys():
+		var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)
+		if entry:
+			HttpPoolModule.release_request(entry)
+	_native_requests.clear()
+	_pending_requests.clear()
+	for entry in _pool:
+		if entry and entry.node and is_instance_valid(entry.node):
+			entry.node.queue_free()
+	_pool.clear()
 
 func _finish_request_error(request_id: String, entry: RequestEntry, error_key: String, status_code: int = 0) -> void:
 	_send_error(entry.callback, request_id, status_code, error_key)
