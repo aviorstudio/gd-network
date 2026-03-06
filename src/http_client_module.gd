@@ -153,7 +153,20 @@ func _on_web_result_ready(args: Array) -> void:
 	if entry == null:
 		return
 	_pending_requests.erase(request_id)
-	_handle_web_response(request_id, entry, result_json)
+	var parsed: JSON = JSON.new()
+	if parsed.parse(result_json) != OK or not (parsed.data is Dictionary):
+		_send_error(entry.callback, request_id, 0, ERROR_PARSE_ERROR)
+		return
+
+	var payload: Dictionary[String, Variant] = _coerce_dict(parsed.data)
+	var ok: bool = bool(payload.get("ok", false))
+	var status_code: int = int(payload.get("status", 0))
+	if not ok:
+		_send_error(entry.callback, request_id, status_code, _map_error_key(status_code, ERROR_REQUEST_FAILED))
+		return
+
+	var body_text: String = str(payload.get("text", ""))
+	_finalize_response(status_code, body_text.to_utf8_buffer(), entry.callback)
 
 func _schedule_web_timeout(request_id: String, timeout_ms: int) -> void:
 	if timeout_ms <= 0 or _owner == null or _owner.get_tree() == null:
@@ -167,7 +180,7 @@ func _on_web_request_timeout(request_id: String) -> void:
 	if entry == null:
 		return
 	_pending_requests.erase(request_id)
-	_finish_request_error(request_id, entry, ERROR_REQUEST_FAILED)
+	_send_error(entry.callback, request_id, 0, ERROR_REQUEST_FAILED)
 
 func _begin_native_request(request_id: String, url: String, method: HTTPClient.Method, headers: PackedStringArray, body: String, callback: Callable) -> void:
 	var entry: HttpPoolModule.PoolEntry = HttpPoolModule.acquire_request(_owner, _pool, _config.default_timeout_s)
@@ -182,23 +195,6 @@ func _begin_native_request(request_id: String, url: String, method: HTTPClient.M
 		HttpPoolModule.release_request(entry)
 		_send_error(callback, request_id, 0, ERROR_REQUEST_FAILED)
 
-func _handle_web_response(request_id: String, entry: RequestEntry, result_json: String) -> void:
-	var parsed: JSON = JSON.new()
-	if parsed.parse(result_json) != OK or not (parsed.data is Dictionary):
-		_finish_request_error(request_id, entry, ERROR_PARSE_ERROR)
-		return
-
-	var payload: Dictionary[String, Variant] = _coerce_dict(parsed.data)
-	var ok: bool = bool(payload.get("ok", false))
-	var status_code: int = int(payload.get("status", 0))
-	if not ok:
-		_finish_request_error(request_id, entry, _map_error_key(status_code, ERROR_REQUEST_FAILED), status_code)
-		return
-
-	var body_text: String = str(payload.get("text", ""))
-	var response: HttpResponse = _build_response(status_code, body_text.to_utf8_buffer())
-	entry.callback.call(_response_to_dict(response))
-
 func _on_native_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request_id: String) -> void:
 	var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)
 	if entry == null:
@@ -209,8 +205,7 @@ func _on_native_request_completed(result: int, response_code: int, _headers: Pac
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_send_error(callback, request_id, response_code, _map_error_key(response_code, ERROR_REQUEST_FAILED))
 		return
-	var response: HttpResponse = _build_response(response_code, body)
-	callback.call(_response_to_dict(response))
+	_finalize_response(response_code, body, callback)
 
 func cleanup() -> void:
 	for request_id in _native_requests.keys():
@@ -224,15 +219,16 @@ func cleanup() -> void:
 			entry.node.queue_free()
 	_pool.clear()
 
-func _finish_request_error(request_id: String, entry: RequestEntry, error_key: String, status_code: int = 0) -> void:
-	_send_error(entry.callback, request_id, status_code, error_key)
-
 func _send_error(callback: Callable, _request_id: String, status_code: int, error_key: String) -> void:
 	var response := HttpResponse.new()
 	response.success = false
 	response.status_code = status_code
 	response.error_key = error_key
 	response.error_message = _resolve_error_message(status_code, error_key)
+	callback.call(_response_to_dict(response))
+
+func _finalize_response(status_code: int, body_bytes: PackedByteArray, callback: Callable) -> void:
+	var response: HttpResponse = _build_response(status_code, body_bytes)
 	callback.call(_response_to_dict(response))
 
 func _coerce_dict(value: Variant) -> Dictionary[String, Variant]:
