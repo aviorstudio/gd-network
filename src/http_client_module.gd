@@ -3,6 +3,7 @@ class_name HttpClientModule
 extends RefCounted
 
 const HttpPoolModule = preload("http_pool_module.gd")
+const WebFetchBridgeModule = preload("web_fetch_bridge_module.gd")
 const HEADER_CONTENT_TYPE_JSON: String = "Content-Type: application/json"
 const HEADER_ACCEPT_JSON: String = "Accept: application/json"
 const ERROR_REQUEST_FAILED: String = "request_failed"
@@ -42,9 +43,7 @@ func setup(owner: Node, config: HttpClientConfig = null) -> void:
 	_config = config if config != null else HttpClientConfig.new()
 	if OS.has_feature("web"):
 		_js_callback = JavaScriptBridge.create_callback(_on_web_result_ready)
-		JavaScriptBridge.eval("window.__godotHttpCallback = null;")
-		var js_interface: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		js_interface.__godotHttpCallback = _js_callback
+		WebFetchBridgeModule.install_callback(_js_callback)
 
 ## Executes a JSON GET request.
 func get_json(endpoint: String, callback: Callable, headers: PackedStringArray = PackedStringArray()) -> String:
@@ -99,50 +98,11 @@ func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Cal
 		var timeout_ms: int = int(_config.default_timeout_s * 1000.0)
 		_pending_requests[request_id] = RequestEntry.new(callback)
 		_schedule_web_timeout(request_id, timeout_ms)
-		_begin_web_request(request_id, full_url, _method_to_string(method), headers, json_body)
+		WebFetchBridgeModule.begin_request(request_id, full_url, _method_to_string(method), headers, json_body)
 		return request_id
 
 	_begin_native_request(request_id, full_url, method, headers, json_body, callback)
 	return request_id
-
-func _begin_web_request(request_id: String, url: String, method: String, headers: PackedStringArray, body: String) -> void:
-	var header_dict: Dictionary[String, String] = {}
-	for header_line: String in headers:
-		var colon_index: int = header_line.find(":")
-		if colon_index <= 0:
-			continue
-		var key: String = header_line.substr(0, colon_index).strip_edges()
-		if key.is_empty():
-			continue
-		var value: String = header_line.substr(colon_index + 1).strip_edges()
-		header_dict[key] = value
-
-	var req_id_json: String = JSON.stringify(request_id)
-	var url_json: String = JSON.stringify(url)
-	var method_json: String = JSON.stringify(method)
-	var headers_json: String = JSON.stringify(header_dict)
-	var body_line: String = ""
-	if not body.is_empty():
-		body_line = "opts.body = " + JSON.stringify(body) + ";\n"
-
-	var js_code: String = (
-		"(function(){\n"
-		+ "const reqId = " + req_id_json + ";\n"
-		+ "const url = " + url_json + ";\n"
-		+ "const opts = { method: " + method_json + ", headers: " + headers_json + " };\n"
-		+ body_line
-		+ "fetch(url, opts).then((resp) => {\n"
-		+ "  return resp.text().then((text) => {\n"
-		+ "    const result = JSON.stringify({ ok: resp.ok, status: resp.status, text: text });\n"
-		+ "    if (window.__godotHttpCallback) window.__godotHttpCallback(reqId, result);\n"
-		+ "  });\n"
-		+ "}).catch((err) => {\n"
-		+ "  const result = JSON.stringify({ ok: false, status: 0, error: String(err) });\n"
-		+ "  if (window.__godotHttpCallback) window.__godotHttpCallback(reqId, result);\n"
-		+ "});\n"
-		+ "})();"
-	)
-	JavaScriptBridge.eval(js_code)
 
 func _on_web_result_ready(args: Array) -> void:
 	if args.size() < 2:
