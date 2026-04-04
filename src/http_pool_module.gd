@@ -10,6 +10,7 @@ class PoolEntry extends RefCounted:
 	var request_id: String = ""
 
 const DEFAULT_DOWNLOAD_CHUNK_SIZE: int = 65536
+const DEFAULT_MAX_POOL_SIZE: int = 8
 
 ## Creates a new pool entry and attaches request node to owner when provided.
 static func create_entry(owner: Node, default_timeout_s: float, chunk_size: int = DEFAULT_DOWNLOAD_CHUNK_SIZE) -> PoolEntry:
@@ -25,12 +26,23 @@ static func create_entry(owner: Node, default_timeout_s: float, chunk_size: int 
 	return entry
 
 ## Acquires an available request entry, creating one when needed.
-static func acquire_request(owner: Node, pool: Array[PoolEntry], default_timeout_s: float, chunk_size: int = DEFAULT_DOWNLOAD_CHUNK_SIZE) -> PoolEntry:
+## When pool reaches max_pool_size, recycles the first idle entry or force-recycles the oldest.
+static func acquire_request(owner: Node, pool: Array[PoolEntry], default_timeout_s: float, chunk_size: int = DEFAULT_DOWNLOAD_CHUNK_SIZE, max_pool_size: int = DEFAULT_MAX_POOL_SIZE) -> PoolEntry:
 	for entry in pool:
 		if not entry.busy:
 			entry.busy = true
 			entry.node.timeout = default_timeout_s
 			return entry
+
+	if max_pool_size > 0 and pool.size() >= max_pool_size:
+		# All entries busy and pool is at capacity — force-recycle the first entry
+		var recycled: PoolEntry = pool[0]
+		recycled.busy = true
+		recycled.callback = Callable()
+		recycled.request_id = ""
+		recycled.node.cancel_request()
+		recycled.node.timeout = default_timeout_s
+		return recycled
 
 	var entry := create_entry(owner, default_timeout_s, chunk_size)
 	entry.busy = true
