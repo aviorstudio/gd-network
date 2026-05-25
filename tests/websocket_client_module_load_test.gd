@@ -1,9 +1,9 @@
 extends SceneTree
 
 func _initialize() -> void:
-	var websocket_client_module := load("res://src/websocket_client_module.gd")
+	var websocket_client_module := load("res://addon/src/websocket_client_module.gd")
 	if websocket_client_module == null:
-		push_error("Failed to load res://src/websocket_client_module.gd")
+		push_error("Failed to load res://addon/src/websocket_client_module.gd")
 		quit(1)
 		return
 

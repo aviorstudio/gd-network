@@ -1,7 +1,7 @@
 extends SceneTree
 
-const WebSocketClientModule = preload("res://src/websocket_client_module.gd")
-const RetryBackoffModule = preload("res://src/retry_backoff_module.gd")
+const WebSocketClientModule = preload("res://addon/src/websocket_client_module.gd")
+const RetryBackoffModule = preload("res://addon/src/retry_backoff_module.gd")
 
 var _reconnecting_attempt: int = -1
 

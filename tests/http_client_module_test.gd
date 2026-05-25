@@ -3,7 +3,7 @@ extends SceneTree
 var _last_payload: Dictionary[String, Variant] = {}
 
 func _load_http_client_module() -> Variant:
-	return load("res://src/http_client_module.gd")
+	return load("res://addon/src/http_client_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -23,7 +23,7 @@ func _initialize() -> void:
 func _test_missing_setup_returns_error(failures: Array[String]) -> void:
 	var http_client_module: Variant = _load_http_client_module()
 	if http_client_module == null:
-		failures.append("Failed to load res://src/http_client_module.gd")
+		failures.append("Failed to load res://addon/src/http_client_module.gd")
 		return
 	_last_payload = {}
 	var module = http_client_module.new()
@@ -39,7 +39,7 @@ func _test_missing_setup_returns_error(failures: Array[String]) -> void:
 func _test_error_mapper_applied(failures: Array[String]) -> void:
 	var http_client_module: Variant = _load_http_client_module()
 	if http_client_module == null:
-		failures.append("Failed to load res://src/http_client_module.gd")
+		failures.append("Failed to load res://addon/src/http_client_module.gd")
 		return
 	var owner := Node.new()
 	root.add_child(owner)
@@ -65,7 +65,7 @@ func _test_error_mapper_applied(failures: Array[String]) -> void:
 func _test_native_request_pool_reuse(failures: Array[String]) -> void:
 	var http_client_module: Variant = _load_http_client_module()
 	if http_client_module == null:
-		failures.append("Failed to load res://src/http_client_module.gd")
+		failures.append("Failed to load res://addon/src/http_client_module.gd")
 		return
 
 	var owner := Node.new()
