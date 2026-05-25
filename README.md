@@ -1,18 +1,36 @@
 # gd-network
 
-Narrow transport primitives for Godot 4 (HTTP, WebSocket, pooling, retry/backoff, rate limiting, and bounded delta windowing).
+Use reusable HTTP, WebSocket, retry, rate-limit, and network-window helpers in Godot 4.
 
-This addon intentionally avoids app-level connection orchestration. Keep match/session lifecycle policy in game code.
+This addon gives you low-level transport building blocks so your game code can own authentication, sessions, matchmaking, and reconnect policy.
 
 ## Installation
 
 ### Via gdpm
+
 `gdpm install @aviorstudio/gd-network`
 
 ### Manual
-Copy `addon/` into `addons/@aviorstudio_gd-network/` and enable the plugin.
+
+Copy `addon/` into `res://addons/@aviorstudio_gd-network/` and enable the plugin.
 
 ## Quick Start
+
+```gdscript
+const HttpClientModule = preload("res://addons/@aviorstudio_gd-network/src/http_client_module.gd")
+
+var http := HttpClientModule.new()
+add_child(http)
+
+http.get_json("https://example.com/api/profile", {}, func(result: Dictionary) -> void:
+	if result.success:
+		print(result.json)
+	else:
+		push_warning(result.error_message)
+)
+```
+
+## Retry Example
 
 ```gdscript
 const RetryBackoffModule = preload("res://addons/@aviorstudio_gd-network/src/retry_backoff_module.gd")
@@ -22,20 +40,20 @@ var config := RetryBackoffModule.RetryConfig.new(250, 2.0, 5, 5000)
 state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 ```
 
-## API Reference
+## What You Get
 
 - `HttpClientModule`: callback-based JSON HTTP client for native and web exports.
-- `HttpPoolModule`: acquire/release pooled `HTTPRequest` instances.
-- `RetryBackoffModule`: deterministic retry scheduling primitives.
+- `HttpPoolModule`: acquire and release pooled `HTTPRequest` nodes.
+- `RetryBackoffModule`: deterministic retry scheduling.
 - `RateLimitModule`: token-bucket request limiting.
-- `NetworkWindowingModule`: append/get/prune ordered delta buffers.
-- `ErrorCatalogModule`: reusable network error code and metadata catalog.
-- `WebSocketClientModule`: minimal reconnecting websocket node (transport only).
-- `WebFetchBridgeModule`: web-only JS interop boundary used by `HttpClientModule`.
+- `NetworkWindowingModule`: append, read, and prune ordered delta buffers.
+- `ErrorCatalogModule`: shared network error keys and metadata.
+- `WebSocketClientModule`: minimal reconnecting WebSocket node.
+- `WebFetchBridgeModule`: web-only JavaScript fetch bridge used by HTTP helpers.
 
-`HttpClientModule.cancel_request(request_id)` cancels pending native requests and ignores late web responses for cancelled IDs.
+## HTTP Result Shape
 
-`HttpClientModule` callbacks receive a dictionary with:
+HTTP callbacks receive a dictionary with:
 
 - `success: bool`
 - `request_id: String`
@@ -44,25 +62,12 @@ state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 - `error_key: String`
 - `error_message: String`
 
-## Scope Boundary
+## Notes
 
-- In scope: transport helpers that are reusable across games.
-- Out of scope: app-level reconnect policy/state machines, session orchestration, and route-driven networking behavior.
-
-## Configuration
-
-No project settings are required.
-
-## Compatibility
-
-- Godot 4.x.
-- Native HTTP uses `HTTPRequest` nodes.
+- No project settings are required.
+- Native HTTP uses Godot `HTTPRequest` nodes.
 - Web HTTP uses `JavaScriptBridge` through `WebFetchBridgeModule`.
 - WebSocket support follows Godot `WebSocketPeer` platform behavior.
-
-## API Stability
-
-The stable public API is the module classes under `src/`. Authentication, session refresh, matchmaking, app reconnect policy, and route-level behavior belong in game code.
 
 ## Testing
 
