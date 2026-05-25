@@ -1,6 +1,6 @@
 # gd-network
 
-Narrow transport primitives for Godot 4 (pooling, retry/backoff, rate limiting, and bounded delta windowing).
+Narrow transport primitives for Godot 4 (HTTP, WebSocket, pooling, retry/backoff, rate limiting, and bounded delta windowing).
 
 This addon intentionally avoids app-level connection orchestration. Keep match/session lifecycle policy in game code.
 
@@ -24,6 +24,7 @@ state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 
 ## API Reference
 
+- `HttpClientModule`: callback-based JSON HTTP client for native and web exports.
 - `HttpPoolModule`: acquire/release pooled `HTTPRequest` instances.
 - `RetryBackoffModule`: deterministic retry scheduling primitives.
 - `RateLimitModule`: token-bucket request limiting.
@@ -31,6 +32,17 @@ state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 - `ErrorCatalogModule`: reusable network error code and metadata catalog.
 - `WebSocketClientModule`: minimal reconnecting websocket node (transport only).
 - `WebFetchBridgeModule`: web-only JS interop boundary used by `HttpClientModule`.
+
+`HttpClientModule.cancel_request(request_id)` cancels pending native requests and ignores late web responses for cancelled IDs.
+
+`HttpClientModule` callbacks receive a dictionary with:
+
+- `success: bool`
+- `request_id: String`
+- `status_code: int`
+- `json: Variant`
+- `error_key: String`
+- `error_message: String`
 
 ## Scope Boundary
 
@@ -40,6 +52,17 @@ state = RetryBackoffModule.next_retry(Time.get_ticks_msec(), state, config)
 ## Configuration
 
 No project settings are required.
+
+## Compatibility
+
+- Godot 4.x.
+- Native HTTP uses `HTTPRequest` nodes.
+- Web HTTP uses `JavaScriptBridge` through `WebFetchBridgeModule`.
+- WebSocket support follows Godot `WebSocketPeer` platform behavior.
+
+## API Stability
+
+The stable public API is the module classes under `src/`. Authentication, session refresh, matchmaking, app reconnect policy, and route-level behavior belong in game code.
 
 ## Testing
 

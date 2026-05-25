@@ -18,6 +18,7 @@ class HttpClientConfig extends RefCounted:
 ## Normalized HTTP response payload.
 class HttpResponse extends RefCounted:
 	var success: bool = false
+	var request_id: String = ""
 	var status_code: int = 0
 	var json: Variant = null
 	var error_key: String = ""
@@ -68,6 +69,21 @@ func set_base_url(url: String) -> void:
 ## Updates the default request timeout in seconds.
 func set_default_timeout(timeout_s: float) -> void:
 	_config.default_timeout_s = timeout_s
+
+## Cancels a pending request by ID. Returns true when a pending request was found.
+func cancel_request(request_id: String) -> bool:
+	var cancelled: bool = false
+	if _pending_requests.has(request_id):
+		_pending_requests.erase(request_id)
+		cancelled = true
+	if _native_requests.has(request_id):
+		var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)
+		_native_requests.erase(request_id)
+		if entry != null:
+			entry.node.cancel_request()
+			HttpPoolModule.release_request(entry)
+		cancelled = true
+	return cancelled
 
 func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Callable, extra_headers: PackedStringArray, body: Dictionary = {}) -> String:
 	_request_counter += 1
@@ -126,7 +142,7 @@ func _on_web_result_ready(args: Array) -> void:
 		return
 
 	var body_text: String = str(payload.get("text", ""))
-	_finalize_response(status_code, body_text.to_utf8_buffer(), entry.callback)
+	_finalize_response(request_id, status_code, body_text.to_utf8_buffer(), entry.callback)
 
 func _schedule_web_timeout(request_id: String, timeout_ms: int) -> void:
 	if timeout_ms <= 0 or _owner == null or _owner.get_tree() == null:
@@ -165,7 +181,7 @@ func _on_native_request_completed(result: int, response_code: int, _headers: Pac
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_send_error(callback, request_id, response_code, _map_error_key(response_code, ERROR_REQUEST_FAILED))
 		return
-	_finalize_response(response_code, body, callback)
+	_finalize_response(request_id, response_code, body, callback)
 
 func cleanup() -> void:
 	for request_id in _native_requests.keys():
@@ -179,16 +195,18 @@ func cleanup() -> void:
 			entry.node.queue_free()
 	_pool.clear()
 
-func _send_error(callback: Callable, _request_id: String, status_code: int, error_key: String) -> void:
+func _send_error(callback: Callable, request_id: String, status_code: int, error_key: String) -> void:
 	var response := HttpResponse.new()
 	response.success = false
+	response.request_id = request_id
 	response.status_code = status_code
 	response.error_key = error_key
 	response.error_message = _resolve_error_message(status_code, error_key)
 	callback.call(_response_to_dict(response))
 
-func _finalize_response(status_code: int, body_bytes: PackedByteArray, callback: Callable) -> void:
+func _finalize_response(request_id: String, status_code: int, body_bytes: PackedByteArray, callback: Callable) -> void:
 	var response: HttpResponse = _build_response(status_code, body_bytes)
+	response.request_id = request_id
 	callback.call(_response_to_dict(response))
 
 func _coerce_dict(value: Variant) -> Dictionary[String, Variant]:
@@ -238,6 +256,7 @@ func _build_response(code: int, raw: PackedByteArray) -> HttpResponse:
 func _response_to_dict(response: HttpResponse) -> Dictionary[String, Variant]:
 	return {
 		"success": response.success,
+		"request_id": response.request_id,
 		"status_code": response.status_code,
 		"json": response.json,
 		"error_key": response.error_key,
