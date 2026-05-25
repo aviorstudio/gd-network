@@ -1,9 +1,9 @@
 extends SceneTree
 
 func _initialize() -> void:
-	var error_catalog_module := load("res://src/error_catalog_module.gd")
+	var error_catalog_module := load("res://addon/src/error_catalog_module.gd")
 	if error_catalog_module == null:
-		push_error("Failed to load res://src/error_catalog_module.gd")
+		push_error("Failed to load res://addon/src/error_catalog_module.gd")
 		quit(1)
 		return
 

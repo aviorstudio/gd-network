@@ -3,7 +3,7 @@ extends SceneTree
 var _transitions: Array[String] = []
 
 func _load_connection_state_module() -> Variant:
-	return load("res://src/connection_state_module.gd")
+	return load("res://addon/src/connection_state_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -22,7 +22,7 @@ func _initialize() -> void:
 func _test_transition_rules(failures: Array[String]) -> void:
 	var connection_state_module: Variant = _load_connection_state_module()
 	if connection_state_module == null:
-		failures.append("Failed to load res://src/connection_state_module.gd")
+		failures.append("Failed to load res://addon/src/connection_state_module.gd")
 		return
 	_transitions.clear()
 	var module = connection_state_module.new()
@@ -58,7 +58,7 @@ func _test_transition_rules(failures: Array[String]) -> void:
 func _test_reset_and_callbacks(failures: Array[String]) -> void:
 	var connection_state_module: Variant = _load_connection_state_module()
 	if connection_state_module == null:
-		failures.append("Failed to load res://src/connection_state_module.gd")
+		failures.append("Failed to load res://addon/src/connection_state_module.gd")
 		return
 	var module = connection_state_module.new()
 	var config = connection_state_module.ConnectionStateConfig.new()

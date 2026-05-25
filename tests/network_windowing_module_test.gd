@@ -1,6 +1,6 @@
 extends SceneTree
 
-const NetworkWindowingModule = preload("res://src/network_windowing_module.gd")
+const NetworkWindowingModule = preload("res://addon/src/network_windowing_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

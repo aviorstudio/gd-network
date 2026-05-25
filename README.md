@@ -10,7 +10,7 @@ This addon intentionally avoids app-level connection orchestration. Keep match/s
 `gdpm install @aviorstudio/gd-network`
 
 ### Manual
-Copy this directory into `addons/@aviorstudio_gd-network/` and enable the plugin.
+Copy `addon/` into `addons/@aviorstudio_gd-network/` and enable the plugin.
 
 ## Quick Start
 

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const HttpPoolModule = preload("res://src/http_pool_module.gd")
+const HttpPoolModule = preload("res://addon/src/http_pool_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

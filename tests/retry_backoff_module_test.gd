@@ -1,6 +1,6 @@
 extends SceneTree
 
-const RetryBackoffModule = preload("res://src/retry_backoff_module.gd")
+const RetryBackoffModule = preload("res://addon/src/retry_backoff_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const RateLimitModule = preload("res://src/rate_limit_module.gd")
+const RateLimitModule = preload("res://addon/src/rate_limit_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
