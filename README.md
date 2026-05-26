@@ -6,9 +6,9 @@ This addon gives you low-level transport building blocks so your game code can o
 
 ## Installation
 
-### Via gdpm
+### Via gdam
 
-`gdpm install @aviorstudio/gd-network`
+`gdam install @aviorstudio/gd-network`
 
 ### Manual
 
