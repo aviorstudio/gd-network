@@ -71,11 +71,17 @@ func prune_older_than(now_msec: int, max_age_ms: int) -> void:
 	var cutoff: int = now_msec - max_age_ms
 	for stream_key: String in _buffers.keys():
 		var buffer: Array[DeltaEntry] = _buffers[stream_key]
-		var pruned_buffer: Array[DeltaEntry] = []
-		for entry in buffer:
-			if entry.timestamp_msec >= cutoff:
-				pruned_buffer.append(entry)
-		_buffers[stream_key] = pruned_buffer
+		var remove_count: int = 0
+		while remove_count < buffer.size() and buffer[remove_count].timestamp_msec < cutoff:
+			remove_count += 1
+		if remove_count == 0:
+			continue
+		if remove_count >= buffer.size():
+			buffer.clear()
+			continue
+		for read_index in range(remove_count, buffer.size()):
+			buffer[read_index - remove_count] = buffer[read_index]
+		buffer.resize(buffer.size() - remove_count)
 
 ## Clears buffered deltas and sequence counters for a stream key.
 func clear(stream_key: String) -> void:
