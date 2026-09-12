@@ -37,6 +37,8 @@ func _test_initial_state_and_reconnect_signal(failures: Array[String]) -> void:
 		failures.append("Expected reconnecting signal with current retry attempt")
 	if module.reconnect_count != 1:
 		failures.append("Expected reconnect_count to increment on retry attempt")
+	module.stop()
+	module.free()
 
 func _capture_reconnecting(attempt: int) -> void:
 	_reconnecting_attempt = attempt
