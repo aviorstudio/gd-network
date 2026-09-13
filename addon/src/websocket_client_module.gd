@@ -26,6 +26,8 @@ var _connected: bool = false
 var _active: bool = false
 var state: ConnectionState = ConnectionState.DISCONNECTED
 var reconnect_count: int = 0
+var max_message_bytes: int = 1024 * 1024
+var max_queued_packets: int = 64
 
 ## Initializes processing in an idle state until `start()` is called.
 func _ready() -> void:
@@ -64,6 +66,8 @@ func is_socket_open() -> bool:
 ## Sends a UTF-8 text message when the socket is open.
 func send_text(message: String) -> bool:
 	if not is_socket_open():
+		return false
+	if message.to_utf8_buffer().size() > max_message_bytes:
 		return false
 	var error: Error = _ws.send_text(message)
 	return error == OK
@@ -108,6 +112,9 @@ func _attempt_connect() -> void:
 		_ws.close()
 		_ws = null
 	_ws = WebSocketPeer.new()
+	_ws.inbound_buffer_size = max_message_bytes
+	_ws.outbound_buffer_size = max_message_bytes
+	_ws.max_queued_packets = max_queued_packets
 	_ws.handshake_headers = _headers
 	var error: Error = _ws.connect_to_url(_url)
 	if error != OK:
