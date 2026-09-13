@@ -105,7 +105,7 @@ jobs:
           path: dist
 
       - name: Verify downloaded package identity
-        run: sha256sum --check --strict dist/@aviorstudio_gd-network.zip.sha256
+        run: (cd dist && sha256sum --check --strict '@aviorstudio_gd-network.zip.sha256')
 
       - name: Create GitHub Release
         env:
