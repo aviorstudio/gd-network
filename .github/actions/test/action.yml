@@ -36,6 +36,8 @@ runs:
       with:
         godot-version: '4.7.2'
         godot-linux-x86-64-sha256: 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4'
+        install-templates: 'true'
+        godot-templates-sha256: 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011'
 
     - name: Runner negative controls
       shell: bash
@@ -54,3 +56,14 @@ runs:
       run: |
         ./scripts/package.sh
         ./tests/package_test.sh
+
+    - name: Native HTTP integration
+      shell: bash
+      run: ./tests/http_integration_test.sh
+
+    - name: Web transport integration
+      shell: bash
+      run: |
+        npm ci
+        npx playwright install --with-deps chromium
+        ./tests/web_integration_test.sh
