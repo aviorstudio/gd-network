@@ -9,7 +9,7 @@ fixture="$(mktemp -d)"
 trap 'rm -rf "$fixture"' EXIT
 
 test -f "$archive"
-(cd "$ROOT_DIR/dist" && sha256sum --check --strict '@aviorstudio_gd-network.zip.sha256')
+bash "$ROOT_DIR/scripts/verify_package_checksum.sh"
 python3 "$SCRIPT_DIR/verify_zip.py" "$archive" "$ROOT_DIR/addon/package-manifest.txt"
 
 addon_dir="$fixture/addons/@aviorstudio_gd-network"
