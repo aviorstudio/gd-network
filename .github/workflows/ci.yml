@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${ github.ref }
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -39,3 +39,14 @@ jobs:
 
       - name: Test
         uses: ./.github/actions/test
+
+      - name: Upload tested package evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tested-package-${{ github.sha }}
+          path: |
+            dist/@aviorstudio_gd-network.zip
+            dist/@aviorstudio_gd-network.zip.sha256
+            dist/installed-tree.sha256
+          if-no-files-found: error
+          retention-days: 14
