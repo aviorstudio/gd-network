@@ -20,9 +20,9 @@ Copy `addon/` into `res://addons/@aviorstudio_gd-network/` and enable the plugin
 const HttpClientModule = preload("res://addons/@aviorstudio_gd-network/src/http_client_module.gd")
 
 var http := HttpClientModule.new()
-add_child(http)
+http.setup(self)
 
-http.get_json("https://example.com/api/profile", {}, func(result: Dictionary) -> void:
+http.get_json("https://example.com/api/profile", func(result: Dictionary) -> void:
 	if result.success:
 		print(result.json)
 	else:
@@ -62,6 +62,24 @@ HTTP callbacks receive a dictionary with:
 - `error_key: String`
 - `error_message: String`
 
+## Bounded Transport Contract
+
+`HttpClientConfig` defaults to eight concurrent requests per client. A ninth
+request is rejected immediately with `capacity_exceeded`; a busy request is
+never canceled or reused. Request bodies are limited to 1 MiB, response bodies
+to 8 MiB, redirects to five, and retained error text to 1 KiB. Absolute HTTP
+and HTTPS URLs are supported; relative endpoints require an HTTP(S) `base_url`.
+
+Every accepted request has a generation identity. Capacity, validation,
+explicit cancellation, timeout, transport failure, and completion invoke the
+request callback exactly once with a typed `error_key`. `cleanup()` and owner
+destruction invalidate pending callbacks without invoking consumer code.
+Browser requests use a per-client namespace and one `AbortController` per
+request; native requests disconnect stale completion signals before reuse.
+
+`WebSocketClientModule` uses 1 MiB inbound/outbound buffers, at most 64 queued
+packets, and rejects outbound UTF-8 text larger than 1 MiB.
+
 ## Notes
 
 - No project settings are required.
@@ -90,7 +108,10 @@ Run locally with:
 ./tests/test.sh
 ```
 
-CI runs the same test script when available.
+**Correction ([fieldsofrevik#145](https://github.com/aviorstudio/fieldsofrevik/issues/145)):** the prior text said CI ran the test script
+“when available,” which could describe a missing suite as green. CI and Release
+now require the Godot 4.7.2 suite, runner negative controls, reachable PASS
+sentinels, and tests of the exact closed-manifest ZIP. Missing tests fail.
 
 ## License
 

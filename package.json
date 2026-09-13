@@ -1,0 +1,10 @@
+{
+  "name": "gd-network-tests",
+  "private": true,
+  "scripts": {
+    "test:web": "playwright test tests/web_transport.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
