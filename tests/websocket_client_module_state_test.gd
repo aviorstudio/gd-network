@@ -37,6 +37,10 @@ func _test_initial_state_and_reconnect_signal(failures: Array[String]) -> void:
 		failures.append("Expected reconnecting signal with current retry attempt")
 	if module.reconnect_count != 1:
 		failures.append("Expected reconnect_count to increment on retry attempt")
+	if module.max_message_bytes != 1024 * 1024 or module.max_queued_packets != 64:
+		failures.append("Expected bounded WebSocket defaults of 1 MiB and 64 packets")
+	if module._ws != null and (module._ws.inbound_buffer_size != 1024 * 1024 or module._ws.outbound_buffer_size != 1024 * 1024 or module._ws.max_queued_packets != 64):
+		failures.append("Expected WebSocketPeer to receive configured transport bounds")
 	module.stop()
 	module.free()
 

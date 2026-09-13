@@ -7,6 +7,7 @@ func _initialize() -> void:
 	_test_acquire_and_release_marks_busy_state(failures)
 	_test_pool_growth_for_concurrent_acquire(failures)
 	_test_reuse_after_release(failures)
+	_test_capacity_never_recycles_busy_entry(failures)
 
 	if failures.is_empty():
 		print("PASS gd-network http_pool_module_test")
@@ -28,6 +29,27 @@ func _test_acquire_and_release_marks_busy_state(failures: Array[String]) -> void
 	if entry.busy:
 		failures.append("Expected released entry to be marked idle")
 	owner.queue_free()
+
+func _test_capacity_never_recycles_busy_entry(failures: Array[String]) -> void:
+	var owner := Node.new()
+	root.add_child(owner)
+	var pool: Array[HttpPoolModule.PoolEntry] = []
+	var identities: Array[int] = []
+	for index in range(8):
+		var entry := HttpPoolModule.acquire_request(owner, pool, 3.0, HttpPoolModule.DEFAULT_DOWNLOAD_CHUNK_SIZE, 8)
+		if entry == null:
+			failures.append("Expected request %d within capacity to acquire" % index)
+			continue
+		identities.append(entry.node.get_instance_id())
+	var rejected := HttpPoolModule.acquire_request(owner, pool, 3.0, HttpPoolModule.DEFAULT_DOWNLOAD_CHUNK_SIZE, 8)
+	if rejected != null:
+		failures.append("Expected ninth overlapping request to be rejected without recycling")
+	if pool.size() != 8:
+		failures.append("Expected pool to remain bounded at eight entries")
+	for index in range(pool.size()):
+		if not pool[index].busy or pool[index].node.get_instance_id() != identities[index]:
+			failures.append("Busy pool entry %d was mutated during saturation" % index)
+	owner.free()
 
 func _test_pool_growth_for_concurrent_acquire(failures: Array[String]) -> void:
 	var owner := Node.new()

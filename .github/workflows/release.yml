@@ -85,6 +85,7 @@ jobs:
             dist/@aviorstudio_gd-network.zip
             dist/@aviorstudio_gd-network.zip.sha256
             dist/installed-tree.sha256
+            dist/web-acceptance.png
           if-no-files-found: error
 
   publish:
