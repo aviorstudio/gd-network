@@ -23,9 +23,15 @@ trap 'rm -f "$log"' EXIT
 set +e
 timeout --signal=TERM --kill-after=5 "$timeout_seconds" \
     "$GODOT" --headless --path "$ROOT_DIR" --script "$script" 2>&1 | tee "$log"
-status=${PIPESTATUS[0]}
+pipeline_status=("${PIPESTATUS[@]}")
+status=${pipeline_status[0]}
+tee_status=${pipeline_status[1]}
 set -e
 
+if [ "$tee_status" -ne 0 ]; then
+    echo "Failed to capture complete Godot test log: $script" >&2
+    exit 1
+fi
 if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
     echo "Godot test timed out after ${timeout_seconds}s: $script" >&2
     exit 1
