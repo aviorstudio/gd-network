@@ -69,10 +69,14 @@ func get_json(endpoint: String, callback: Callable, headers: PackedStringArray =
 	return _execute_request(HTTPClient.METHOD_GET, endpoint, callback, headers)
 
 func post_json(endpoint: String, body: Dictionary, callback: Callable, headers: PackedStringArray = PackedStringArray()) -> String:
-	return _execute_request(HTTPClient.METHOD_POST, endpoint, callback, headers, body)
+	return _execute_request(HTTPClient.METHOD_POST, endpoint, callback, headers, JSON.stringify(body))
+
+## POST with exactly zero body bytes. post_json({}) still serializes "{}".
+func post_zero_body(endpoint: String, callback: Callable, headers: PackedStringArray = PackedStringArray()) -> String:
+	return _execute_request(HTTPClient.METHOD_POST, endpoint, callback, headers, "")
 
 func put_json(endpoint: String, body: Dictionary, callback: Callable, headers: PackedStringArray = PackedStringArray()) -> String:
-	return _execute_request(HTTPClient.METHOD_PUT, endpoint, callback, headers, body)
+	return _execute_request(HTTPClient.METHOD_PUT, endpoint, callback, headers, JSON.stringify(body))
 
 func delete_json(endpoint: String, callback: Callable, headers: PackedStringArray = PackedStringArray()) -> String:
 	return _execute_request(HTTPClient.METHOD_DELETE, endpoint, callback, headers)
@@ -102,7 +106,7 @@ func cancel_request(request_id: String) -> bool:
 	_send_error(callback, request_id, 0, ERROR_CANCELLED)
 	return true
 
-func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Callable, extra_headers: PackedStringArray, body: Dictionary = {}) -> String:
+func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Callable, extra_headers: PackedStringArray, request_body: String = "") -> String:
 	_request_counter += 1
 	_generation_counter += 1
 	var request_id := str(_request_counter)
@@ -122,19 +126,19 @@ func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Cal
 	if method == HTTPClient.METHOD_POST or method == HTTPClient.METHOD_PUT:
 		headers.insert(0, HEADER_CONTENT_TYPE_JSON)
 	headers.append_array(extra_headers)
-	var json_body := ""
+	var outbound_body := ""
 	if method == HTTPClient.METHOD_POST or method == HTTPClient.METHOD_PUT:
-		json_body = JSON.stringify(body)
-		if json_body.to_utf8_buffer().size() > _config.max_request_body_bytes:
+		outbound_body = request_body
+		if outbound_body.to_utf8_buffer().size() > _config.max_request_body_bytes:
 			_send_error(callback, request_id, 0, ERROR_REQUEST_TOO_LARGE)
 			return request_id
 
 	if OS.has_feature("web"):
 		_pending_requests[request_id] = RequestEntry.new(callback, _generation_counter)
 		_schedule_web_timeout(request_id, _generation_counter)
-		WebFetchBridgeModule.begin_request(_client_id, request_id, full_url, _method_to_string(method), headers, json_body, _config.max_response_body_bytes, _config.max_redirects)
+		WebFetchBridgeModule.begin_request(_client_id, request_id, full_url, _method_to_string(method), headers, outbound_body, _config.max_response_body_bytes, _config.max_redirects)
 	else:
-		_begin_native_request(request_id, full_url, method, headers, json_body, callback)
+		_begin_native_request(request_id, full_url, method, headers, outbound_body, callback)
 	return request_id
 
 func _begin_native_request(request_id: String, url: String, method: HTTPClient.Method, headers: PackedStringArray, body: String, callback: Callable) -> void:
@@ -149,12 +153,24 @@ func _begin_native_request(request_id: String, url: String, method: HTTPClient.M
 	entry.completion_callable = _on_native_request_completed.bind(request_id, entry.generation)
 	entry.node.request_completed.connect(entry.completion_callable, CONNECT_ONE_SHOT)
 	_native_requests[request_id] = entry
-	var error := entry.node.request(url, headers, method, body)
+	var error := entry.node.request(url, _native_request_headers(method, headers, body), method, body)
 	if error != OK:
 		_native_requests.erase(request_id)
 		_disconnect_entry(entry)
 		HttpPoolModule.release_request(entry)
 		_send_error(callback, request_id, 0, ERROR_REQUEST_FAILED)
+
+## Godot omits Content-Length when the body is empty. Set it only on this native
+## path: browsers forbid Content-Length on fetch, so it must not be shared.
+func _native_request_headers(method: HTTPClient.Method, headers: PackedStringArray, body: String) -> PackedStringArray:
+	if method != HTTPClient.METHOD_POST or not body.is_empty():
+		return headers
+	for header_line in headers:
+		if header_line.to_lower().begins_with("content-length:"):
+			return headers
+	var native_headers := headers.duplicate()
+	native_headers.append("Content-Length: 0")
+	return native_headers
 
 func _on_native_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request_id: String, generation: int) -> void:
 	var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)
