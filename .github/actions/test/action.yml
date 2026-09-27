@@ -43,6 +43,10 @@ runs:
       shell: bash
       run: ./tests/runner_self_test.sh
 
+    - name: Release recovery negative controls
+      shell: bash
+      run: ./tests/release_recovery_test.sh
+
     # No `if: hashFiles(...)` guard. This step used to skip itself when
     # tests/test.sh was absent, which is indistinguishable from the script being
     # renamed or deleted -- a skipped test is a green tick. This addon has a
