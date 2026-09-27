@@ -322,14 +322,20 @@ func _assert_captured_requests(failures: Array[String]) -> void:
 	var json_body := str(json_request.get("body", ""))
 	if zero_body.to_utf8_buffer().size() != 0:
 		failures.append("Expected post_zero_body to send zero bytes, got %d (%s)" % [zero_body.to_utf8_buffer().size(), zero_body])
-	if int(zero.get("content_length", -1)) > 0:
-		failures.append("Expected post_zero_body Content-Length to be absent or zero")
+	var zero_length_count := 0
+	for line in str(zero.get("headers", "")).split("\r\n"):
+		if line.to_lower().begins_with("content-length:"):
+			zero_length_count += 1
+	if zero_length_count != 1 or int(zero.get("content_length", -1)) != 0 or not str(zero.get("headers", "")).contains("Content-Length: 0"):
+		failures.append("Expected exactly one native Content-Length: 0, got count %d value %s" % [zero_length_count, str(zero.get("content_length", -1))])
 	if str(zero.get("raw", "")).contains("{}"):
 		failures.append("Expected native zero-body POST to exclude '{}'")
 	if json_body != "{}":
 		failures.append("Expected post_json({}) to remain '{}', got %s" % json_body)
 	if json_body.to_utf8_buffer().size() != 2:
 		failures.append("Expected post_json({}) to send 2 bytes")
+	if int(json_request.get("content_length", -1)) != 2:
+		failures.append("Expected post_json({}) Content-Length to remain 2, got %s" % str(json_request.get("content_length", -1)))
 	for path in ["/zero", "/json"]:
 		var captured: Dictionary = _captured_requests.get(path, {})
 		var headers := str(captured.get("headers", ""))
