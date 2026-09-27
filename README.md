@@ -104,11 +104,13 @@ packets, and rejects outbound UTF-8 text larger than 1 MiB.
 - `addon/src/`: reusable GDScript modules.
 - `tests/`: Godot test project/scripts for addon behavior.
 - `.github/workflows/ci.yml`: validates package shape and runs tests.
-- `.github/workflows/release.yml`: creates GitHub release ZIPs and publishes to GDAM.
+- `.github/workflows/release.yml`: creates GitHub release ZIPs and publishes to GDAM. A verified retry can republish an existing immutable release without creating another tag or ZIP.
 
 ## Versioning And Releases
 
-The version in `addon/plugin.cfg` is the addon package version. `0.0.4` adds `post_zero_body`. Releases are created from `main` with the manual release workflow and plain semver tags like `v0.0.4`; the workflow verifies `plugin.cfg`, builds `@aviorstudio_gd-network.zip`, and publishes `@aviorstudio/gd-network` to GDAM.
+The version in `addon/plugin.cfg` is the addon package version. `0.0.4` adds `post_zero_body`. Releases are created from protected `main` with the manual release workflow and plain semver tags like `v0.0.4`; the workflow verifies `plugin.cfg`, builds `@aviorstudio_gd-network.zip`, and publishes `@aviorstudio/gd-network` to GDAM.
+
+To republish an existing immutable tag after a failed registry publish, dispatch that same workflow from protected `main` with `retry-tag` and `retry-sha256` set together. Retry requires the tag commit to be the current main commit or an ancestor of it, `plugin.cfg` at that tag and on main to equal the tag version, the GitHub release target to match the tag, and the existing `@aviorstudio_gd-network.zip` digest to match `retry-sha256`. Retry downloads and checksums that ZIP. It does not build a package, create a tag, or create a GitHub release. Leave both retry inputs empty for a normal bump.
 
 ## Testing
 
@@ -116,6 +118,7 @@ Run locally with:
 
 ```sh
 ./tests/test.sh
+./tests/release_recovery_test.sh
 ```
 
 **Correction ([fieldsofrevik#145](https://github.com/aviorstudio/fieldsofrevik/issues/145)):** the prior text said CI ran the test script
