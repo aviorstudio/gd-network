@@ -153,12 +153,24 @@ func _begin_native_request(request_id: String, url: String, method: HTTPClient.M
 	entry.completion_callable = _on_native_request_completed.bind(request_id, entry.generation)
 	entry.node.request_completed.connect(entry.completion_callable, CONNECT_ONE_SHOT)
 	_native_requests[request_id] = entry
-	var error := entry.node.request(url, headers, method, body)
+	var error := entry.node.request(url, _native_request_headers(method, headers, body), method, body)
 	if error != OK:
 		_native_requests.erase(request_id)
 		_disconnect_entry(entry)
 		HttpPoolModule.release_request(entry)
 		_send_error(callback, request_id, 0, ERROR_REQUEST_FAILED)
+
+## Godot omits Content-Length when the body is empty. Set it only on this native
+## path: browsers forbid Content-Length on fetch, so it must not be shared.
+func _native_request_headers(method: HTTPClient.Method, headers: PackedStringArray, body: String) -> PackedStringArray:
+	if method != HTTPClient.METHOD_POST or not body.is_empty():
+		return headers
+	for header_line in headers:
+		if header_line.to_lower().begins_with("content-length:"):
+			return headers
+	var native_headers := headers.duplicate()
+	native_headers.append("Content-Length: 0")
+	return native_headers
 
 func _on_native_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request_id: String, generation: int) -> void:
 	var entry: HttpPoolModule.PoolEntry = _native_requests.get(request_id, null)

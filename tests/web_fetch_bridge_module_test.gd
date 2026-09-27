@@ -10,7 +10,7 @@ func _initialize() -> void:
 		"client-a", "request-1", "https://example.com", "POST",
 		PackedStringArray(["X-Test: value", BEARER_HEADER]), "{}", 8388608, 5
 	)
-	for required in ["client-a", "request-1", "AbortController", "controllers.set", "controllers.delete", "maxBytes=8388608", "maxRedirects=5", "response_too_large", "too_many_redirects", "redirect:'manual'"]:
+	for required in ["client-a", "request-1", "AbortController", "controllers.set", "controllers.delete", "maxBytes=8388608", "maxRedirects=5", "response_too_large", "too_many_redirects", "redirect:'manual'", "opaqueredirect", "next.origin"]:
 		if not json_script.contains(required):
 			failures.append("Generated browser transport omitted %s" % required)
 	_assert_browser_body(failures, json_script, true)
@@ -20,6 +20,8 @@ func _initialize() -> void:
 		"", 8388608, 5
 	)
 	_assert_browser_body(failures, empty_script, false)
+	if empty_script.contains("Content-Length"):
+		failures.append("Expected browser script to omit forbidden Content-Length")
 	if failures.is_empty():
 		print("PASS gd-network web_fetch_bridge_module_test")
 		quit(0)

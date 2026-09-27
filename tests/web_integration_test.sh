@@ -7,7 +7,7 @@ GODOT="${GODOT_BIN:-godot}"
 fixture="$(mktemp -d)"
 port_file="$(mktemp)"
 rm -f "$port_file"
-trap 'if [ -n "${server_pid:-}" ]; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; rm -rf "$fixture"; rm -f "$port_file"' EXIT
+trap 'if [ -n "${server_pid:-}" ]; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi; rm -rf "$fixture"; rm -f "$port_file" "${port_file}.sink" "${port_file}.sink-hits"' EXIT
 
 cp -R "$SCRIPT_DIR/web_fixture/." "$fixture/"
 mkdir -p "$fixture/addons/@aviorstudio_gd-network" "$fixture/dist"
@@ -21,5 +21,11 @@ for _ in $(seq 1 100); do
 done
 test -s "$port_file"
 export GD_NETWORK_WEB_URL="http://127.0.0.1:$(<"$port_file")/index.html"
+export GD_NETWORK_SINK_PORT="$(<"${port_file}.sink")"
 npx playwright test "$SCRIPT_DIR/web_transport.spec.js" --reporter=line
-echo "PASS web_integration_test clients=2 requests=11 capacity=typed cancel_callbacks=1"
+if [ -s "${port_file}.sink-hits" ]; then
+    echo "Cross-origin redirect sink received a followed request" >&2
+    cat "${port_file}.sink-hits" >&2
+    exit 1
+fi
+echo "PASS web_integration_test clients=2 requests=14 capacity=typed cancel_callbacks=1 zero_body=0 redirect_followed=0"

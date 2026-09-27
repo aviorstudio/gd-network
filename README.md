@@ -77,6 +77,16 @@ destruction invalidate pending callbacks without invoking consumer code.
 Browser requests use a per-client namespace and one `AbortController` per
 request; native requests disconnect stale completion signals before reuse.
 
+## Zero-body POST
+
+`HttpClientModule.post_zero_body(endpoint, callback, headers)` sends a POST with exactly zero body bytes. `post_json({})` still serializes and sends `{}`. Put authorization in `headers`; it is not a body field. Headers, timeout, and error callbacks are the same as `post_json`.
+
+Native POST sets `Content-Length: 0` only on the Godot `HTTPRequest` path. Web POST omits the fetch body and does not set `Content-Length`, which browsers forbid.
+
+Web fetch uses `redirect: 'manual'`. A conforming browser exposes an opaque redirect, so the bridge does not follow it and does not send a second request. A visible cross-origin `Location` is also rejected. Native GET still follows redirects through Godot `HTTPRequest` and can resend `Authorization` to the redirect target, including another host. This release does not change that pre-existing native GET behavior.
+
+Added in addon version 0.0.4.
+
 `WebSocketClientModule` uses 1 MiB inbound/outbound buffers, at most 64 queued
 packets, and rejects outbound UTF-8 text larger than 1 MiB.
 
@@ -98,7 +108,7 @@ packets, and rejects outbound UTF-8 text larger than 1 MiB.
 
 ## Versioning And Releases
 
-The version in `addon/plugin.cfg` is the addon package version. Releases are created from `main` with the manual release workflow and plain semver tags like `v0.0.1`; the workflow verifies `plugin.cfg`, builds `@aviorstudio_gd-network.zip`, and publishes `@aviorstudio/gd-network` to GDAM.
+The version in `addon/plugin.cfg` is the addon package version. `0.0.4` adds `post_zero_body`. Releases are created from `main` with the manual release workflow and plain semver tags like `v0.0.4`; the workflow verifies `plugin.cfg`, builds `@aviorstudio_gd-network.zip`, and publishes `@aviorstudio/gd-network` to GDAM.
 
 ## Testing
 
