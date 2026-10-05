@@ -1,3 +1,5 @@
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 20e51e5a2552e16c097ada2e0ebfb3cbed9aab3541235b8fe6db6a1cbd690530 -->
+
 # gd-network
 
 Use reusable HTTP, WebSocket, retry, rate-limit, and network-window helpers in Godot 4.
@@ -97,35 +99,7 @@ packets, and rejects outbound UTF-8 text larger than 1 MiB.
 - Web HTTP uses `JavaScriptBridge` through `WebFetchBridgeModule`.
 - WebSocket support follows Godot `WebSocketPeer` platform behavior.
 
-## Repository Layout
-
-- `addon/`: Godot plugin source packaged for GDAM and manual installation.
-- `addon/plugin.cfg`: plugin name, version, description, and entry script.
-- `addon/src/`: reusable GDScript modules.
-- `tests/`: Godot test project/scripts for addon behavior.
-- `.github/workflows/ci.yml`: validates package shape and runs tests.
-- `.github/workflows/release.yml`: creates GitHub release ZIPs and publishes to GDAM. A verified retry can republish an existing immutable release without creating another tag or ZIP.
-
-## Versioning And Releases
-
-The version in `addon/plugin.cfg` is the addon package version. `0.0.4` adds `post_zero_body`. Releases are created from protected `main` with the manual release workflow and plain semver tags like `v0.0.4`; the workflow verifies `plugin.cfg`, builds `@aviorstudio_gd-network.zip`, and publishes `@aviorstudio/gd-network` to GDAM.
-
-To republish an existing immutable tag after a failed registry publish, dispatch that same workflow from protected `main` with `retry-tag` and `retry-sha256` set together. Retry requires the tag commit to be the current main commit or an ancestor of it, `plugin.cfg` at that tag and on main to equal the tag version, the GitHub release target to match the tag, and the existing `@aviorstudio_gd-network.zip` digest to match `retry-sha256`. Retry downloads and checksums that ZIP. It does not build a package, create a tag, or create a GitHub release. Leave both retry inputs empty for a normal bump.
-
-## Testing
-
-Run locally with:
-
-```sh
-./tests/test.sh
-./tests/release_recovery_test.sh
-```
-
-**Correction ([fieldsofrevik#145](https://github.com/aviorstudio/fieldsofrevik/issues/145)):** the prior text said CI ran the test script
-“when available,” which could describe a missing suite as green. CI and Release
-now require the Godot 4.7.2 suite, runner negative controls, reachable PASS
-sentinels, and tests of the exact closed-manifest ZIP. Missing tests fail.
 
 ## License
 
-MIT
+See `LICENSE`.
