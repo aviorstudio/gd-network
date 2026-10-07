@@ -39,35 +39,14 @@ runs:
         install-templates: 'true'
         godot-templates-sha256: 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011'
 
-    - name: Runner negative controls
-      shell: bash
-      run: ./tests/runner_self_test.sh
+    - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
 
-    - name: Release recovery negative controls
-      shell: bash
-      run: ./tests/release_recovery_test.sh
-
-    # No `if: hashFiles(...)` guard. This step used to skip itself when
-    # tests/test.sh was absent, which is indistinguishable from the script being
-    # renamed or deleted -- a skipped test is a green tick. This addon has a
-    # suite, so the step runs unconditionally and a missing script now fails.
-    - name: Godot tests
-      shell: bash
-      run: ./tests/test.sh
-
-    - name: Build and test exact release package
-      shell: bash
-      run: |
-        ./scripts/package.sh
-        ./tests/package_test.sh
-
-    - name: Native HTTP integration
-      shell: bash
-      run: ./tests/http_integration_test.sh
-
-    - name: Web transport integration
+    - name: Install browser dependencies
       shell: bash
       run: |
         npm ci
-        npx playwright install --with-deps chromium
-        ./tests/web_integration_test.sh
+        npx --no-install playwright install --with-deps chromium
+
+    - name: Run addon profile gates
+      shell: bash
+      run: make check
