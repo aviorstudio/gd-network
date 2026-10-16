@@ -502,7 +502,7 @@ need("if: needs.test.outputs.retry != 'true'" in create_window, "create guarded 
 need("./scripts/release_recovery.sh assert-bump" in create_window, "create calls assert-bump")
 need(create_window.index("assert-bump") < create_window.index("gh release create"), "assert-bump before create")
 need("version: ${{ needs.test.outputs.version }}" not in text, "unsupported version input removed")
-publish_at = text.index("      - name: Publish exact GitHub asset to GDAM\n")
+publish_at = text.index("uses: aviorstudio/gdam-actions/publish@")
 publish_block = text[publish_at:text.index("api-key:", publish_at)]
 need("version:" not in publish_block, "publish step has no version input")
 need("addon: '@aviorstudio/gd-network'" in text, "explicit addon")
