@@ -32,14 +32,16 @@ runs:
     # Godot comes from a LOCAL action, copied from the one castledrop and prizm
     # carry. The version used to be a download URL written into ci.yml -- the
     # engine this addon is tested against lived in workflow YAML.
-    - uses: ./.github/actions/setup-godot
+    - name: "Set up Godot"
+      uses: ./.github/actions/setup-godot
       with:
         godot-version: '4.7.2'
         godot-linux-x86-64-sha256: 'cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4'
         install-templates: 'true'
         godot-templates-sha256: 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011'
 
-    - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+    - name: "Set up tools"
+      uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
 
     - name: Install browser dependencies
       shell: bash
