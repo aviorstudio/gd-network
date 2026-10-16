@@ -27,6 +27,7 @@ concurrency: release-${{ github.repository }}
 
 jobs:
   test:
+    name: "Test package"
     runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       version: ${{ steps.release.outputs.version }}
@@ -38,7 +39,8 @@ jobs:
     # runner's own timeout hours later.
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: "Check out source"
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -55,7 +57,7 @@ jobs:
 
       # The same checks CI runs, from the same definition. Skipped on retry:
       # retry republishes the existing ZIP and must not package a new one.
-      - name: Test exact release commit and package
+      - name: "Test"
         if: steps.release.outputs.retry != 'true'
         uses: ./.github/actions/test
 
@@ -68,7 +70,7 @@ jobs:
           TARGET: ${{ steps.release.outputs.target }}
         run: ./scripts/release_recovery.sh recover
 
-      - name: Upload exact tested package
+      - name: "Upload artifacts"
         if: steps.release.outputs.retry != 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -80,7 +82,7 @@ jobs:
             dist/web-acceptance.png
           if-no-files-found: error
 
-      - name: Upload recovered release package
+      - name: "Upload artifacts"
         if: steps.release.outputs.retry == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -91,6 +93,7 @@ jobs:
           if-no-files-found: error
 
   publish:
+    name: "Publish release"
     needs: test
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
@@ -98,9 +101,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: "Check out source"
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Download exact tested package
+      - name: "Download artifacts"
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-package-${{ github.sha }}
@@ -131,7 +135,7 @@ jobs:
           EXPECTED_SHA256: ${{ needs.test.outputs.sha256 }}
         run: ./scripts/release_recovery.sh recheck
 
-      - name: Publish exact GitHub asset to GDAM
+      - name: "Publish addon"
         uses: aviorstudio/gdam-actions/publish@6677226d9353df1d410f3e7f5075e13b3b7d5308 # v0.5.1
         with:
           tag: ${{ needs.test.outputs.tag }}
