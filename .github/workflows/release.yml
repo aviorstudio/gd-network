@@ -28,7 +28,7 @@ concurrency: release-${{ github.repository }}
 jobs:
   test:
     name: "Test package"
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.release.outputs.version }}
       tag: ${{ steps.release.outputs.tag }}
@@ -95,7 +95,7 @@ jobs:
   publish:
     name: "Publish release"
     needs: test
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: release
     permissions:
