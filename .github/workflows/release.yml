@@ -1,6 +1,5 @@
 name: Release
-
-on:
+'on':
   workflow_dispatch:
     inputs:
       bump:
@@ -8,9 +7,9 @@ on:
         required: true
         type: choice
         options:
-          - patch
-          - minor
-          - major
+        - patch
+        - minor
+        - major
       retry-tag:
         description: Existing immutable vX.Y.Z tag to republish. Empty for a normal bump.
         required: false
@@ -19,15 +18,12 @@ on:
         description: Required SHA-256 of the existing release ZIP when retry-tag is set.
         required: false
         type: string
-
 permissions:
   contents: read
-
 concurrency: release-${{ github.repository }}
-
 jobs:
   test:
-    name: "Test package"
+    name: Test package
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.release.outputs.version }}
@@ -35,65 +31,67 @@ jobs:
       retry: ${{ steps.release.outputs.retry }}
       target: ${{ steps.release.outputs.target }}
       sha256: ${{ steps.release.outputs.sha256 }}
-    # Bounded, so a step that hangs fails here rather than sitting until the
-    # runner's own timeout hours later.
     timeout-minutes: 20
     steps:
-      - name: "Check out source"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Determine release version
-        id: release
-        env:
-          BUMP: ${{ inputs.bump }}
-          RETRY_TAG: ${{ inputs['retry-tag'] }}
-          RETRY_SHA256: ${{ inputs['retry-sha256'] }}
-        run: |
-          set -euo pipefail
-          git fetch --tags --force
-          ./scripts/release_recovery.sh plan
-
-      # The same checks CI runs, from the same definition. Skipped on retry:
-      # retry republishes the existing ZIP and must not package a new one.
-      - name: "Test"
-        if: steps.release.outputs.retry != 'true'
-        uses: ./.github/actions/test
-
-      - name: Recover existing immutable release package
-        if: steps.release.outputs.retry == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
-          EXPECTED_SHA256: ${{ steps.release.outputs.sha256 }}
-          TARGET: ${{ steps.release.outputs.target }}
-        run: ./scripts/release_recovery.sh recover
-
-      - name: "Upload artifacts"
-        if: steps.release.outputs.retry != 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-package-${{ github.sha }}
-          path: |
-            dist/@aviorstudio_gd-network.zip
-            dist/@aviorstudio_gd-network.zip.sha256
-            dist/installed-tree.sha256
-            dist/web-acceptance.png
-          if-no-files-found: error
-
-      - name: "Upload artifacts"
-        if: steps.release.outputs.retry == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-package-${{ github.sha }}
-          path: |
-            dist/@aviorstudio_gd-network.zip
-            dist/@aviorstudio_gd-network.zip.sha256
-          if-no-files-found: error
-
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        fetch-depth: 0
+    - name: Set up locked Komizo
+      uses: nicodes/komizo/setup@f7b2d96c5456827633e0a4adce67f8604bbdd193
+      env:
+        GH_TOKEN: ${{ github.token }}
+      timeout-minutes: 5
+    - name: Determine release version
+      id: release
+      env:
+        BUMP: ${{ inputs.bump }}
+        RETRY_TAG: ${{ inputs['retry-tag'] }}
+        RETRY_SHA256: ${{ inputs['retry-sha256'] }}
+      run: |
+        set -euo pipefail
+        git fetch --tags --force
+        ./scripts/release_recovery.sh plan
+    - name: Check project
+      if: steps.release.outputs.retry != 'true'
+      uses: nicodes/komizo/run@f7b2d96c5456827633e0a4adce67f8604bbdd193
+      with:
+        target: check
+    - name: Recover existing immutable release package
+      if: steps.release.outputs.retry == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ steps.release.outputs.tag }}
+        EXPECTED_SHA256: ${{ steps.release.outputs.sha256 }}
+        TARGET: ${{ steps.release.outputs.target }}
+      run: ./scripts/release_recovery.sh recover
+    - name: Upload artifacts
+      if: steps.release.outputs.retry != 'true'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: release-package-${{ github.sha }}
+        path: |
+          dist/@aviorstudio_gd-network.zip
+          dist/@aviorstudio_gd-network.zip.sha256
+          dist/installed-tree.sha256
+          dist/web-acceptance.png
+        if-no-files-found: error
+    - name: Upload artifacts
+      if: steps.release.outputs.retry == 'true'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: release-package-${{ github.sha }}
+        path: |
+          dist/@aviorstudio_gd-network.zip
+          dist/@aviorstudio_gd-network.zip.sha256
+        if-no-files-found: error
+    permissions:
+      contents: read
+      attestations: read
+    env:
+      MISE_GITHUB_TOKEN: ${{ github.token }}
   publish:
-    name: "Publish release"
+    name: Publish release
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -101,44 +99,39 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: "Check out source"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: "Download artifacts"
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-package-${{ github.sha }}
-          path: dist
-
-      - name: Verify downloaded package identity
-        run: bash ./scripts/verify_package_checksum.sh
-
-      - name: Create GitHub Release
-        if: needs.test.outputs.retry != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.test.outputs.tag }}
-          RETRY: ${{ needs.test.outputs.retry }}
-          RETRY_TAG: ${{ inputs['retry-tag'] }}
-          RETRY_SHA256: ${{ inputs['retry-sha256'] }}
-        run: |
-          set -euo pipefail
-          ./scripts/release_recovery.sh assert-bump
-          gh release create "$TAG" dist/*.zip --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
-
-      - name: Verify existing GitHub Release
-        if: needs.test.outputs.retry == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.test.outputs.tag }}
-          TARGET: ${{ needs.test.outputs.target }}
-          EXPECTED_SHA256: ${{ needs.test.outputs.sha256 }}
-        run: ./scripts/release_recovery.sh recheck
-
-      - name: "Publish addon"
-        uses: aviorstudio/gdam-actions/publish@6677226d9353df1d410f3e7f5075e13b3b7d5308 # v0.5.1
-        with:
-          tag: ${{ needs.test.outputs.tag }}
-          addon: '@aviorstudio/gd-network'
-          asset: '@aviorstudio_gd-network.zip'
-          api-key: ${{ secrets.GDAM_API_KEY }}
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+    - name: Download artifacts
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: release-package-${{ github.sha }}
+        path: dist
+    - name: Verify downloaded package identity
+      run: bash ./scripts/verify_package_checksum.sh
+    - name: Create GitHub Release
+      if: needs.test.outputs.retry != 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.test.outputs.tag }}
+        RETRY: ${{ needs.test.outputs.retry }}
+        RETRY_TAG: ${{ inputs['retry-tag'] }}
+        RETRY_SHA256: ${{ inputs['retry-sha256'] }}
+      run: |
+        set -euo pipefail
+        ./scripts/release_recovery.sh assert-bump
+        gh release create "$TAG" dist/*.zip --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
+    - name: Verify existing GitHub Release
+      if: needs.test.outputs.retry == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.test.outputs.tag }}
+        TARGET: ${{ needs.test.outputs.target }}
+        EXPECTED_SHA256: ${{ needs.test.outputs.sha256 }}
+      run: ./scripts/release_recovery.sh recheck
+    - name: Publish addon
+      uses: aviorstudio/gdam-actions/publish@6677226d9353df1d410f3e7f5075e13b3b7d5308
+      with:
+        tag: ${{ needs.test.outputs.tag }}
+        addon: '@aviorstudio/gd-network'
+        asset: '@aviorstudio_gd-network.zip'
+        api-key: ${{ secrets.GDAM_API_KEY }}

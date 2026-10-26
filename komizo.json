@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "recipe": "godot-addon",
+  "repository": "aviorstudio/gd-network",
+  "tools": {
+    "node": "24.18.1"
+  },
+  "stages": {
+    "install": [
+      [
+        "python3",
+        "-c",
+        "import os,runpy;runpy.run_path(os.environ[\"CICD_ENGINEERING\"]+\"/helpers/godot-addon.py\",run_name=\"__main__\")",
+        "install"
+      ],
+      [
+        "npm",
+        "ci"
+      ],
+      [
+        "bash",
+        "-euo",
+        "pipefail",
+        "-c",
+        "flags=(); if [ \"${CI:-}\" = true ]; then flags+=(--with-deps); fi; npx --no-install playwright install \"${flags[@]}\" chromium"
+      ]
+    ]
+  },
+  "validation": {
+    "workflow": {
+      "required": [
+        "ci.yml",
+        "dependency-policy.yml",
+        "release.yml"
+      ],
+      "ci_gates": [
+        "Test"
+      ]
+    }
+  }
+}
