@@ -4,3 +4,7 @@ node_modules/
 test-results/
 .playwright-cli/
 .artifacts/
+
+.komizo.mise*.toml
+
+.komizo.mise*.lock
