@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 20e51e5a2552e16c097ada2e0ebfb3cbed9aab3541235b8fe6db6a1cbd690530 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c488d547322fa117a59bdd4b8078f8d60bc04cc6260c13d49ac95c9ce33642ac -->
 
 # gd-network
 
@@ -103,3 +103,16 @@ packets, and rejects outbound UTF-8 text larger than 1 MiB.
 ## License
 
 See `LICENSE`.
+
+## Contributor checks
+
+Install [mise](https://mise.jdx.dev/), then prepare the pinned development helpers and run the complete native gate:
+
+```sh
+git clone https://github.com/nicodes/tools.git .ci-tools
+git -C .ci-tools checkout --detach f7e243524ce2aa29f299e4c79db33001f72f4a30
+mise install
+mise run check
+```
+
+`mise.toml` owns tool versions and tasks. Engine and template downloads are checksum verified. `mise run build` packages the addon; `mise run test` runs its declared tests. The complete check also validates the installed artifact. Build and test receipts stay in `.artifacts/verification`.
