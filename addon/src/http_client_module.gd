@@ -34,6 +34,8 @@ class HttpResponse extends RefCounted:
 	var json: Variant = null
 	var error_key := ""
 	var error_message := ""
+	var error_code := ""
+	var server_request_id := ""
 
 class RequestEntry extends RefCounted:
 	var callback: Callable
@@ -309,14 +311,37 @@ func _build_response(code: int, raw: PackedByteArray) -> HttpResponse:
 	if not body_str.is_empty():
 		var parser := JSON.new()
 		if parser.parse(body_str) == OK and parser.data is Dictionary:
+			var problem: Variant = parser.data.get("error")
+			if problem is Dictionary:
+				# Keep the local request handle and status mapper independent of the
+				# server's stable domain code and support correlation.
+				var machine_code: Variant = problem.get("code", "")
+				if machine_code is String and _wire_identifier(machine_code, 64):
+					out.error_code = machine_code
+				var correlation: Variant = problem.get("request_id", "")
+				if correlation is String and _wire_identifier(correlation, 128):
+					out.server_request_id = correlation
+				var message: Variant = problem.get("message", "")
+				if message is String and not message.is_empty():
+					out.error_message = _truncate_utf8(message, _config.max_error_message_bytes)
+				return out
 			for key in ["msg", "error_message", "errorMessage"]:
 				if parser.data.has(key):
 					out.error_message = _truncate_utf8(str(parser.data.get(key)), _config.max_error_message_bytes)
 					break
 	return out
 
+func _wire_identifier(value: String, limit: int) -> bool:
+	if value.is_empty() or value.length() > limit:
+		return false
+	for index in value.length():
+		var point := value.unicode_at(index)
+		if not ((point >= 48 and point <= 57) or (point >= 65 and point <= 90) or (point >= 97 and point <= 122) or point in [45, 46, 95]):
+			return false
+	return true
+
 func _response_to_dict(response: HttpResponse) -> Dictionary[String, Variant]:
-	return {"success": response.success, "request_id": response.request_id, "status_code": response.status_code, "json": response.json, "error_key": response.error_key, "error_message": response.error_message}
+	return {"success": response.success, "request_id": response.request_id, "status_code": response.status_code, "json": response.json, "error_key": response.error_key, "error_message": response.error_message, "error_code": response.error_code, "server_request_id": response.server_request_id}
 
 func _resolve_full_url(endpoint: String) -> String:
 	if endpoint.contains("://"):

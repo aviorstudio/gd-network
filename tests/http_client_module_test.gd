@@ -22,6 +22,7 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	_test_missing_setup_returns_error(failures)
 	_test_error_mapper_applied(failures)
+	_test_structured_api_failure(failures)
 	_test_native_request_pool_reuse(failures)
 	_test_bounds_validation_and_capacity(failures)
 	_test_cancel_generation_and_cleanup(failures)
@@ -80,6 +81,24 @@ func _test_error_mapper_applied(failures: Array[String]) -> void:
 	if module._resolve_full_url("/v1/ping") != "https://example.com/v1/ping":
 		failures.append("Expected base URL to be prefixed in resolved endpoint")
 
+	owner.queue_free()
+
+func _test_structured_api_failure(failures: Array[String]) -> void:
+	var module_type: Variant = _load_http_client_module()
+	var owner := Node.new()
+	root.add_child(owner)
+	var module = module_type.new()
+	var config = module_type.HttpClientConfig.new()
+	module.setup(owner, config)
+	var response = module._build_response(409, JSON.stringify({"error": {"code": "operation_conflict", "message": "Keep the saved operation", "request_id": "0a12-server"}}).to_utf8_buffer())
+	if response.success or response.error_code != "operation_conflict" or response.server_request_id != "0a12-server" or response.error_message != "Keep the saved operation":
+		failures.append("Structured API failure lost domain/correlation fields")
+	if not response.request_id.is_empty() or response.error_key != "http_409":
+		failures.append("Server metadata replaced local handle or HTTP mapping")
+	var invalid = module._build_response(400, JSON.stringify({"error": {"code": ["bad"], "message": 42, "request_id": "bad\nheader"}}).to_utf8_buffer())
+	if not invalid.error_code.is_empty() or not invalid.server_request_id.is_empty():
+		failures.append("Malformed server metadata was accepted")
+	module.cleanup()
 	owner.queue_free()
 
 func _test_native_request_pool_reuse(failures: Array[String]) -> void:
