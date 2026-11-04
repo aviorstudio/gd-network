@@ -42,6 +42,10 @@ path = "tests/web_integration_test.sh"
 timeout = 600
 
 [publication]
+environment = "release"
+validation_timeout = 20
+publish_timeout = 10
+retry = true
 tag_prefix = "v"
 initial = "first"
 
