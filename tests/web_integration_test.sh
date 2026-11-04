@@ -22,7 +22,7 @@ done
 test -s "$port_file"
 export GD_NETWORK_WEB_URL="http://127.0.0.1:$(<"$port_file")/index.html"
 export GD_NETWORK_SINK_PORT="$(<"${port_file}.sink")"
-npx playwright test "$SCRIPT_DIR/web_transport.spec.js" --reporter=line
+"$ROOT_DIR/node_modules/.bin/playwright" test "$SCRIPT_DIR/web_transport.spec.js" --reporter=line
 if [ -s "${port_file}.sink-hits" ]; then
     echo "Cross-origin redirect sink received a followed request" >&2
     cat "${port_file}.sink-hits" >&2
