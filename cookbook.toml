@@ -10,7 +10,7 @@ archive = "dist/@aviorstudio_gd-network.zip"
 required_paths = ["addon/plugin.cfg", "addon/plugin.gd", "package.files"]
 
 [format]
-paths = ["addon", "tests"]
+paths = ["addon", "tests/connection_state_module_test.gd", "tests/error_catalog_module_test.gd", "tests/gate_fixtures/no_sentinel.gd", "tests/gate_fixtures/overwritten_quit.gd", "tests/gate_fixtures/passing.gd", "tests/gate_fixtures/runtime_error_zero.gd", "tests/gate_fixtures/timeout.gd", "tests/http_client_module_test.gd", "tests/http_native_integration.gd", "tests/http_pool_module_test.gd", "tests/network_windowing_module_test.gd", "tests/rate_limit_module_test.gd", "tests/retry_backoff_module_test.gd", "tests/web_fetch_bridge_module_test.gd", "tests/web_fixture/main.gd", "tests/websocket_client_module_load_test.gd", "tests/websocket_client_module_state_test.gd"]
 
 [clean]
 paths = ["dist", ".artifacts/build", ".artifacts/godot", ".artifacts/godot-data", ".artifacts/playwright", ".artifacts/tmp", ".godot"]
