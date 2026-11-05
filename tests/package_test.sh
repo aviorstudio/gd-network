@@ -9,7 +9,7 @@ fixture="$(mktemp -d)"
 trap 'rm -rf "$fixture"' EXIT
 
 test -f "$archive"
-python3 "$TOOLS_ROOT/helpers/addon-package.py" verify --manifest "$ROOT_DIR/package.files" --checksums "$archive.sha256" "$archive"
+python3 "$TOOLS_ROOT/helpers/addon-package.py" verify --manifest "$ROOT_DIR/package.files" --checksums "$archive.sha256" --archive "$archive"
 
 addon_dir="$fixture/addons/@aviorstudio_gd-network"
 mkdir -p "$addon_dir"
