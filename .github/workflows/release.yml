@@ -1,138 +1,35 @@
+# Generated cookbook caller. Change recipe data and regenerate.
 name: Release
 'on':
   workflow_dispatch:
     inputs:
       bump:
-        description: Version bump. Ignored when retry-tag and retry-sha256 are both set.
-        required: true
+        description: Version bump; plugin.cfg must already match
         type: choice
-        options:
-        - patch
-        - minor
-        - major
+        default: patch
+        options: [patch, minor, major]
       retry-tag:
-        description: Existing immutable vX.Y.Z tag to republish. Empty for a normal bump.
-        required: false
+        description: Existing immutable tag; requires retry-sha256
         type: string
+        default: ''
       retry-sha256:
-        description: Required SHA-256 of the existing release ZIP when retry-tag is set.
-        required: false
+        description: Exact existing release ZIP SHA256; requires retry-tag
         type: string
-permissions:
-  contents: read
-concurrency: release-${{ github.repository }}
+        default: ''
+permissions: {}
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
 jobs:
-  test:
-    name: Test package
-    runs-on: ubuntu-24.04
-    outputs:
-      version: ${{ steps.release.outputs.version }}
-      tag: ${{ steps.release.outputs.tag }}
-      retry: ${{ steps.release.outputs.retry }}
-      target: ${{ steps.release.outputs.target }}
-      sha256: ${{ steps.release.outputs.sha256 }}
-    timeout-minutes: 20
-    steps:
-    - name: Check out source
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      with:
-        fetch-depth: 0
-    - name: Set up development tools
-      uses: nicodes/tools/setup@a1c0321f3b4917a7e99eca42e241e46670f6e1e1
-      env:
-        GH_TOKEN: ${{ github.token }}
-      timeout-minutes: 5
-    - name: Determine release version
-      id: release
-      env:
-        BUMP: ${{ inputs.bump }}
-        RETRY_TAG: ${{ inputs['retry-tag'] }}
-        RETRY_SHA256: ${{ inputs['retry-sha256'] }}
-      run: |-
-        set -euo pipefail
-        git fetch --tags --force
-        ./scripts/release_recovery.sh plan
-    - name: Check project
-      if: steps.release.outputs.retry != 'true'
-      shell: bash
-      run: |-
-        set -euo pipefail
-        mise run check
-    - name: Recover existing immutable release package
-      if: steps.release.outputs.retry == 'true'
-      env:
-        GH_TOKEN: ${{ github.token }}
-        TAG: ${{ steps.release.outputs.tag }}
-        EXPECTED_SHA256: ${{ steps.release.outputs.sha256 }}
-        TARGET: ${{ steps.release.outputs.target }}
-      run: ./scripts/release_recovery.sh recover
-    - name: Upload artifacts
-      if: steps.release.outputs.retry != 'true'
-      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-      with:
-        name: release-package-${{ github.sha }}
-        path: |
-          dist/@aviorstudio_gd-network.zip
-          dist/@aviorstudio_gd-network.zip.sha256
-          dist/installed-tree.sha256
-          dist/web-acceptance.png
-        if-no-files-found: error
-    - name: Upload artifacts
-      if: steps.release.outputs.retry == 'true'
-      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-      with:
-        name: release-package-${{ github.sha }}
-        path: |
-          dist/@aviorstudio_gd-network.zip
-          dist/@aviorstudio_gd-network.zip.sha256
-        if-no-files-found: error
-    permissions:
-      contents: read
-      attestations: read
-    env:
-      MISE_GITHUB_TOKEN: ${{ github.token }}
-  publish:
-    name: Publish release
-    needs: test
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: release
+  release:
+    uses: nicodes/tools/.github/workflows/cookbook-addon-release.yml@ade449c3150fd5a9c86fb6ec21d8ae905d6a2754
     permissions:
       contents: write
-    steps:
-    - name: Check out source
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-    - name: Download artifacts
-      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-      with:
-        name: release-package-${{ github.sha }}
-        path: dist
-    - name: Verify downloaded package identity
-      run: bash ./scripts/verify_package_checksum.sh
-    - name: Create GitHub Release
-      if: needs.test.outputs.retry != 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG: ${{ needs.test.outputs.tag }}
-        RETRY: ${{ needs.test.outputs.retry }}
-        RETRY_TAG: ${{ inputs['retry-tag'] }}
-        RETRY_SHA256: ${{ inputs['retry-sha256'] }}
-      run: |-
-        set -euo pipefail
-        ./scripts/release_recovery.sh assert-bump
-        gh release create "$TAG" dist/*.zip --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
-    - name: Verify existing GitHub Release
-      if: needs.test.outputs.retry == 'true'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG: ${{ needs.test.outputs.tag }}
-        TARGET: ${{ needs.test.outputs.target }}
-        EXPECTED_SHA256: ${{ needs.test.outputs.sha256 }}
-      run: ./scripts/release_recovery.sh recheck
-    - name: Publish addon
-      uses: aviorstudio/gdam-actions/publish@3a46007e296e60e15a4ad47727ad33046e52e6ea
-      with:
-        tag: ${{ needs.test.outputs.tag }}
-        addon: '@aviorstudio/gd-network'
-        asset: '@aviorstudio_gd-network.zip'
-        api-key: ${{ secrets.GDAM_API_KEY }}
+    with:
+      tools-ref: ade449c3150fd5a9c86fb6ec21d8ae905d6a2754
+      mode: release
+      bump: ${{ inputs.bump }}
+      retry-tag: ${{ inputs['retry-tag'] }}
+      retry-sha256: ${{ inputs['retry-sha256'] }}
+    secrets:
+      gdam-key: ${{ secrets.GDAM_API_KEY }}

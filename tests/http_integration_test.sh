@@ -14,4 +14,4 @@ done
 test -s "$port_file"
 export GD_NETWORK_TEST_PORT
 GD_NETWORK_TEST_PORT="$(<"$port_file")"
-"$SCRIPT_DIR/run_godot_test.sh" "$SCRIPT_DIR/http_native_integration.gd" "PASS gd-network http_native_integration" 30
+python3 "$TOOLS_ROOT/helpers/godot-test.py" --project "$SCRIPT_DIR/.." --program "$SCRIPT_DIR/http_native_integration.gd" --sentinel "PASS gd-network http_native_integration" --timeout 30

@@ -9,8 +9,7 @@ fixture="$(mktemp -d)"
 trap 'rm -rf "$fixture"' EXIT
 
 test -f "$archive"
-bash "$ROOT_DIR/scripts/verify_package_checksum.sh"
-python3 "$SCRIPT_DIR/verify_zip.py" "$archive" "$ROOT_DIR/addon/package-manifest.txt"
+python3 "$TOOLS_ROOT/helpers/addon-package.py" verify --manifest "$ROOT_DIR/package.files" --checksums "$archive.sha256" --archive "$archive"
 
 addon_dir="$fixture/addons/@aviorstudio_gd-network"
 mkdir -p "$addon_dir"
@@ -46,7 +45,7 @@ func _initialize() -> void:
 	print("PACKAGED_SMOKE_REACHED")
 	quit(0)
 EOF
-GODOT_PROJECT_ROOT="$fixture" "$SCRIPT_DIR/run_godot_test.sh" "$fixture/smoke.gd" PACKAGED_SMOKE_REACHED 30
+python3 "$TOOLS_ROOT/helpers/godot-test.py" --project "$fixture" --program "$fixture/smoke.gd" --sentinel PACKAGED_SMOKE_REACHED --timeout 30
 
 cat > "$fixture/project.godot" <<'EOF'
 [application]
