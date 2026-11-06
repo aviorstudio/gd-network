@@ -2,8 +2,6 @@ version = 1
 recipe = "godot-addon"
 
 [package]
-source = "addon"
-manifest = "package.files"
 archive = "dist/@aviorstudio_gd-network.zip"
 
 [lint]
@@ -50,7 +48,7 @@ tag_prefix = "v"
 initial = "first"
 
 [node]
-packages = ["."]
+packages = [{directory = ".", manager = "npm"}]
 
 [components.browser]
 package = "."
