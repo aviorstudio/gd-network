@@ -54,6 +54,3 @@ packages = ["."]
 
 [components.browser]
 package = "."
-
-[ci]
-timeout_minutes = 30
