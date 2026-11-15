@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: ea52f5588d2daa6890210d596e17e03e0a156f9f2a2856ea06497d1f4dd9bfbf -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: f6febc88ec21fdb219eea0c1506d00563fb21126bc0b6eeaee8ca56d66c6c03a -->
 
 # gd-network
 
@@ -66,7 +66,7 @@ HTTP callbacks receive a dictionary with:
 - `error_code: String`: validated domain code from a structured HTTP error.
 - `server_request_id: String`: validated server correlation, separate from the local `request_id` handle.
 
-Structured `{error:{code,message,request_id}}` failures keep the HTTP status mapper and bounded text. Existing legacy error fields remain readable for rolling upgrades.
+HTTP failure bodies use `{error:{code,message,request_id}}`. These fields populate bounded error text, validated domain codes and server correlation. Other bodies keep the status-derived error mapping.
 
 ## Bounded Transport Contract
 

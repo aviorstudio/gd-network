@@ -325,10 +325,6 @@ func _build_response(code: int, raw: PackedByteArray) -> HttpResponse:
 				if message is String and not message.is_empty():
 					out.error_message = _truncate_utf8(message, _config.max_error_message_bytes)
 				return out
-			for key in ["msg", "error_message", "errorMessage"]:
-				if parser.data.has(key):
-					out.error_message = _truncate_utf8(str(parser.data.get(key)), _config.max_error_message_bytes)
-					break
 	return out
 
 func _wire_identifier(value: String, limit: int) -> bool:

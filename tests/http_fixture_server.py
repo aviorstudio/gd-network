@@ -7,6 +7,14 @@ import time
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/problem":
+            payload = json.dumps({"error": {"code": "operation_conflict", "message": "Keep the saved operation", "request_id": "server-409"}}).encode()
+            self.send_response(409)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if self.path.startswith("/slow/"):
             time.sleep(0.35)
         if self.path == "/large":

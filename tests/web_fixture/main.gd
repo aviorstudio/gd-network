@@ -25,6 +25,7 @@ func _ready() -> void:
 	_second.post_zero_body("/zero", _on_zero, headers)
 	_second.post_json("/json-empty", {}, _on_json, headers)
 	_second.get_json("/redirect-cross", _on_redirect, headers)
+	_second.get_json("/problem", _on_problem)
 
 func _on_overlap(result: Dictionary, index: int) -> void:
 	_results[str(index)] = result
@@ -51,8 +52,12 @@ func _on_redirect(result: Dictionary) -> void:
 	_results["redirect"] = result
 	_publish_if_complete()
 
+func _on_problem(result: Dictionary) -> void:
+	_results["problem"] = result
+	_publish_if_complete()
+
 func _publish_if_complete() -> void:
-	if _results.size() != 14:
+	if _results.size() != 15:
 		return
 	var success := true
 	for index in range(8):
@@ -65,14 +70,19 @@ func _publish_if_complete() -> void:
 	var json_result: Dictionary = _results.get("json", {})
 	var redirect: Dictionary = _results.get("redirect", {})
 	var zero_json: Dictionary = zero.get("json", {})
+	var problem: Dictionary = _results.get("problem", {})
 	success = success and zero.get("success", false) and int(zero_json.get("bytes", -1)) == 0
 	success = success and str(zero_json.get("content_type", "")) == "application/json"
 	success = success and bool(zero_json.get("has_authorization", false)) and not bool(zero_json.get("token_in_body", true))
 	success = success and json_result.get("success", false) and str(json_result.get("json", {}).get("body", "")) == "{}"
 	success = success and not redirect.get("success", true) and str(redirect.get("error_key", "")) == "redirect_error"
 	success = success and not str(zero).contains(_BEARER_TOKEN) and not str(json_result).contains(_BEARER_TOKEN) and not str(redirect).contains(_BEARER_TOKEN)
+	success = success and not problem.get("success", true) and problem.get("status_code") == 409 and problem.get("error_key") == "http_409"
+	success = success and problem.get("error_code") == "operation_conflict" and problem.get("server_request_id") == "server-409" and problem.get("error_message") == "Keep the saved operation"
+	success = success and not str(problem.get("request_id", "")).is_empty() and problem.get("request_id") != problem.get("server_request_id")
 	var evidence := {
 		"success": success,
+		"problem": problem,
 		"first_count": 9,
 		"second": _results.get("second"),
 		"cancel_count": _cancel_count,

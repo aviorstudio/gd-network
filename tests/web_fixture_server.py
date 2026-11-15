@@ -46,9 +46,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return b""
         return self.rfile.read(int(length_header))
 
-    def _send_json(self, payload):
+    def _send_json(self, payload, status=200):
         encoded = json.dumps(payload).encode()
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded)))
         self.send_header("Cache-Control", "no-store")
@@ -89,6 +89,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/problem":
+            self._send_json({"error": {"code": "operation_conflict", "message": "Keep the saved operation", "request_id": "server-409"}}, 409)
+            return
         if path == "/redirect-cross":
             self.send_response(302)
             self.send_header("Location", "http://127.0.0.1:%d/must-not-follow" % SINK_PORT)
