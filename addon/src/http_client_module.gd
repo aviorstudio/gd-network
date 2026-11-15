@@ -15,7 +15,7 @@ const ERROR_INVALID_URL := "invalid_url"
 const ERROR_UNSUPPORTED_SCHEME := "unsupported_scheme"
 const ERROR_REQUEST_TOO_LARGE := "request_too_large"
 const ERROR_RESPONSE_TOO_LARGE := "response_too_large"
-const ERROR_TOO_MANY_REDIRECTS := "too_many_redirects"
+const ERROR_REDIRECT := "redirect_error"
 
 class HttpClientConfig extends RefCounted:
 	var base_url := ""
@@ -24,7 +24,6 @@ class HttpClientConfig extends RefCounted:
 	var max_concurrent_requests := 8
 	var max_request_body_bytes := 1024 * 1024
 	var max_response_body_bytes := 8 * 1024 * 1024
-	var max_redirects := 5
 	var max_error_message_bytes := 1024
 
 class HttpResponse extends RefCounted:
@@ -138,7 +137,7 @@ func _execute_request(method: HTTPClient.Method, endpoint: String, callback: Cal
 	if OS.has_feature("web"):
 		_pending_requests[request_id] = RequestEntry.new(callback, _generation_counter)
 		_schedule_web_timeout(request_id, _generation_counter)
-		WebFetchBridgeModule.begin_request(_client_id, request_id, full_url, _method_to_string(method), headers, outbound_body, _config.max_response_body_bytes, _config.max_redirects)
+		WebFetchBridgeModule.begin_request(_client_id, request_id, full_url, _method_to_string(method), headers, outbound_body, _config.max_response_body_bytes)
 	else:
 		_begin_native_request(request_id, full_url, method, headers, outbound_body, callback)
 	return request_id
@@ -151,7 +150,7 @@ func _begin_native_request(request_id: String, url: String, method: HTTPClient.M
 	entry.callback = callback
 	entry.request_id = request_id
 	entry.node.body_size_limit = _config.max_response_body_bytes
-	entry.node.max_redirects = _config.max_redirects
+	entry.node.max_redirects = 0
 	entry.completion_callable = _on_native_request_completed.bind(request_id, entry.generation)
 	entry.node.request_completed.connect(entry.completion_callable, CONNECT_ONE_SHOT)
 	_native_requests[request_id] = entry
@@ -185,8 +184,8 @@ func _on_native_request_completed(result: int, response_code: int, _headers: Pac
 		return
 	if result == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED:
 		_send_error(callback, request_id, response_code, ERROR_RESPONSE_TOO_LARGE)
-	elif result == HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED:
-		_send_error(callback, request_id, response_code, ERROR_TOO_MANY_REDIRECTS)
+	elif result == HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED or (response_code >= 300 and response_code < 400):
+		_send_error(callback, request_id, response_code, ERROR_REDIRECT)
 	elif result == HTTPRequest.RESULT_TIMEOUT:
 		_send_error(callback, request_id, response_code, ERROR_TIMEOUT)
 	elif result != HTTPRequest.RESULT_SUCCESS:
@@ -325,10 +324,6 @@ func _build_response(code: int, raw: PackedByteArray) -> HttpResponse:
 				if message is String and not message.is_empty():
 					out.error_message = _truncate_utf8(message, _config.max_error_message_bytes)
 				return out
-			for key in ["msg", "error_message", "errorMessage"]:
-				if parser.data.has(key):
-					out.error_message = _truncate_utf8(str(parser.data.get(key)), _config.max_error_message_bytes)
-					break
 	return out
 
 func _wire_identifier(value: String, limit: int) -> bool:

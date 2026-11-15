@@ -74,20 +74,34 @@ func _on_oversize(result: Dictionary) -> void:
 	_phase = "redirect"
 	_phase_started_msec = Time.get_ticks_msec()
 	_client._config.max_response_body_bytes = 8 * 1024 * 1024
-	_client._config.max_redirects = 1
-	_client.get_json(_base_url + "/redirect/2", _on_redirect)
+	_client.get_json(_base_url + "/redirect-same", _on_redirect, PackedStringArray(["Authorization: Bearer native-redirect-secret"]))
 
 func _on_redirect(result: Dictionary) -> void:
-	if result.get("error_key") != HttpClientModule.ERROR_TOO_MANY_REDIRECTS:
-		_failures.append("Redirect chain above configured limit was not typed too_many_redirects")
+	if result.get("error_key") != HttpClientModule.ERROR_REDIRECT:
+		_failures.append("Same-origin redirect was not typed redirect_error")
+	_phase = "redirect-cross"
+	_phase_started_msec = Time.get_ticks_msec()
+	_client.get_json(_base_url + "/redirect-cross", _on_redirect_cross, PackedStringArray(["Authorization: Bearer native-redirect-secret"]))
+
+func _on_redirect_cross(result: Dictionary) -> void:
+	if result.get("error_key") != HttpClientModule.ERROR_REDIRECT:
+		_failures.append("Cross-origin redirect was not typed redirect_error")
 	_phase = "reuse"
 	_phase_started_msec = Time.get_ticks_msec()
-	_client._config.max_redirects = 5
 	_client.get_json(_base_url + "/payload/reused", _on_reuse)
 
 func _on_reuse(result: Dictionary) -> void:
 	if not result.get("success", false) or result.get("json", {}).get("id") != "reused":
 		_failures.append("Successful pooled request reuse failed")
+	_phase = "problem"
+	_phase_started_msec = Time.get_ticks_msec()
+	_client.get_json(_base_url + "/problem", _on_problem)
+
+func _on_problem(result: Dictionary) -> void:
+	if result.get("success", true) or result.get("status_code") != 409 or result.get("error_key") != "http_409" or result.get("error_code") != "operation_conflict" or result.get("server_request_id") != "server-409" or result.get("error_message") != "Keep the saved operation":
+		_failures.append("Native canonical error lost status/domain/correlation/message fields")
+	if str(result.get("request_id", "")).is_empty() or result.get("request_id") == result.get("server_request_id"):
+		_failures.append("Native local request identity was replaced by server correlation")
 	_client.cleanup()
 	if _failures.is_empty():
 		print("PASS gd-network http_native_integration")

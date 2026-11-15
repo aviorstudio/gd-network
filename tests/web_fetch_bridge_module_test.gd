@@ -8,16 +8,16 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var json_script := WebFetchBridgeModule.build_request_script(
 		"client-a", "request-1", "https://example.com", "POST",
-		PackedStringArray(["X-Test: value", BEARER_HEADER]), "{}", 8388608, 5
+		PackedStringArray(["X-Test: value", BEARER_HEADER]), "{}", 8388608
 	)
-	for required in ["client-a", "request-1", "AbortController", "controllers.set", "controllers.delete", "maxBytes=8388608", "maxRedirects=5", "response_too_large", "too_many_redirects", "redirect:'manual'", "opaqueredirect", "next.origin"]:
+	for required in ["client-a", "request-1", "AbortController", "controllers.set", "controllers.delete", "maxBytes=8388608", "response_too_large", "redirect:'manual'", "opaqueredirect", "redirect_error"]:
 		if not json_script.contains(required):
 			failures.append("Generated browser transport omitted %s" % required)
 	_assert_browser_body(failures, json_script, true)
 	var empty_script := WebFetchBridgeModule.build_request_script(
 		"client-a", "request-0", "https://example.com/sign-out", "POST",
 		PackedStringArray([BEARER_HEADER, "Content-Type: application/json", "Accept: application/json"]),
-		"", 8388608, 5
+		"", 8388608
 	)
 	_assert_browser_body(failures, empty_script, false)
 	if empty_script.contains("Content-Length"):

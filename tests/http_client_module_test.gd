@@ -98,6 +98,15 @@ func _test_structured_api_failure(failures: Array[String]) -> void:
 	var invalid = module._build_response(400, JSON.stringify({"error": {"code": ["bad"], "message": 42, "request_id": "bad\nheader"}}).to_utf8_buffer())
 	if not invalid.error_code.is_empty() or not invalid.server_request_id.is_empty():
 		failures.append("Malformed server metadata was accepted")
+	for key in ["msg", "error_message", "errorMessage"]:
+		var response_body := {key: "old wire detail"}
+		var ignored = module._build_response(409, JSON.stringify(response_body).to_utf8_buffer())
+		if ignored.error_key != "http_409" or ignored.error_message != "http_409" or not ignored.error_code.is_empty() or not ignored.server_request_id.is_empty():
+			failures.append("An unrecognized wire body replaced the HTTP status mapping")
+	config.max_error_message_bytes = 8
+	var bounded = module._build_response(409, JSON.stringify({"error": {"code": "operation_conflict", "message": "é".repeat(10), "request_id": "server-409"}}).to_utf8_buffer())
+	if bounded.error_message.to_utf8_buffer().size() > 8 or bounded.error_code != "operation_conflict" or bounded.server_request_id != "server-409":
+		failures.append("Canonical wire metadata lost its independent bounds")
 	module.cleanup()
 	owner.queue_free()
 

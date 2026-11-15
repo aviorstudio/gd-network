@@ -24,7 +24,16 @@ test('isolates bounded web requests and cancellation', async ({ page }) => {
     zero_success: true,
     json_body: '{}',
     redirect_error: 'redirect_error',
+    problem: {
+      success: false,
+      status_code: 409,
+      error_key: 'http_409',
+      error_code: 'operation_conflict',
+      error_message: 'Keep the saved operation',
+      server_request_id: 'server-409',
+    },
   });
+  expect(evidence.problem.request_id).not.toBe(evidence.problem.server_request_id);
   const token = 'secret-token-not-in-body';
   const zero = seen.filter((request) => request.method === 'POST' && request.url.endsWith('/zero'));
   expect(zero).toHaveLength(1);

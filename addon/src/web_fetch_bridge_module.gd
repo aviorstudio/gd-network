@@ -20,10 +20,9 @@ static func begin_request(
 	method: String,
 	headers: PackedStringArray,
 	body: String,
-	max_response_bytes: int,
-	max_redirects: int
+	max_response_bytes: int
 ) -> void:
-	JavaScriptBridge.eval(build_request_script(client_id, request_id, url, method, headers, body, max_response_bytes, max_redirects))
+	JavaScriptBridge.eval(build_request_script(client_id, request_id, url, method, headers, body, max_response_bytes))
 
 static func abort_request(client_id: String, request_id: String) -> void:
 	JavaScriptBridge.eval(
@@ -44,8 +43,7 @@ static func build_request_script(
 	method: String,
 	headers: PackedStringArray,
 	body: String,
-	max_response_bytes: int,
-	max_redirects: int
+	max_response_bytes: int
 ) -> String:
 	var header_dict: Dictionary[String, String] = {}
 	for header_line: String in headers:
@@ -58,15 +56,16 @@ static func build_request_script(
 	var body_line := ""
 	if not body.is_empty():
 		body_line = "opts.body=" + JSON.stringify(body) + ";"
+	# This flag describes transport completion; HttpClientModule classifies HTTP status.
 	return (
 		"(function(){const registry=window.%s;const client=registry&&registry[%s];if(!client)return;"
 		+ "const reqId=%s;const controller=new AbortController();client.controllers.set(reqId,controller);"
 		+ "const opts={method:%s,headers:%s,signal:controller.signal,redirect:'manual'};%s"
-		+ "const maxBytes=%d,maxRedirects=%d;const finish=(value)=>{client.controllers.delete(reqId);if(client.callback)client.callback(reqId,JSON.stringify(value));};"
+		+ "const maxBytes=%d;const finish=(value)=>{client.controllers.delete(reqId);if(client.callback)client.callback(reqId,JSON.stringify(value));};"
 		+ "const read=async(resp)=>{const declared=Number(resp.headers.get('content-length')||0);if(declared>maxBytes)throw {key:'response_too_large'};"
 		+ "if(!resp.body||!resp.body.getReader){const b=await resp.arrayBuffer();if(b.byteLength>maxBytes)throw {key:'response_too_large'};return new TextDecoder().decode(b);}"
 		+ "const reader=resp.body.getReader(),chunks=[];let total=0;for(;;){const part=await reader.read();if(part.done)break;total+=part.value.byteLength;if(total>maxBytes){controller.abort();throw {key:'response_too_large'};}chunks.push(part.value);}"
 		+ "const all=new Uint8Array(total);let offset=0;for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.byteLength;}return new TextDecoder().decode(all);};"
-		+ "const run=async(target,left)=>{const resp=await fetch(target,opts);if(resp.type==='opaqueredirect')throw {key:'redirect_error'};if(resp.status>=300&&resp.status<400){if(left<=0)throw {key:'too_many_redirects'};const location=resp.headers.get('location');if(!location)throw {key:'redirect_error'};const next=new URL(location,target);if(next.origin!==new URL(target).origin)throw {key:'redirect_error'};return run(next.href,left-1);}const text=await read(resp);return {ok:resp.ok,status:resp.status,text:text};};"
-		+ "run(%s,maxRedirects).then(finish).catch(err=>finish({ok:false,status:0,error_key:(err&&err.key)||((err&&err.name)==='AbortError'?'cancelled':'network_error'),error:String(err)}));})();"
-	) % [GLOBAL_REGISTRY_NAME, JSON.stringify(client_id), JSON.stringify(request_id), JSON.stringify(method), JSON.stringify(header_dict), body_line, max_response_bytes, max_redirects, JSON.stringify(url)]
+		+ "const run=async()=>{const resp=await fetch(%s,opts);if(resp.type==='opaqueredirect'||(resp.status>=300&&resp.status<400))throw {key:'redirect_error'};const text=await read(resp);return {ok:true,status:resp.status,text:text};};"
+		+ "run().then(finish).catch(err=>finish({ok:false,status:0,error_key:(err&&err.key)||((err&&err.name)==='AbortError'?'cancelled':'network_error'),error:String(err)}));})();"
+	) % [GLOBAL_REGISTRY_NAME, JSON.stringify(client_id), JSON.stringify(request_id), JSON.stringify(method), JSON.stringify(header_dict), body_line, max_response_bytes, JSON.stringify(url)]
