@@ -28,4 +28,4 @@ if [ -s "${port_file}.sink-hits" ]; then
     cat "${port_file}.sink-hits" >&2
     exit 1
 fi
-echo "PASS web_integration_test clients=2 requests=14 capacity=typed cancel_callbacks=1 zero_body=0 redirect_followed=0"
+echo "PASS web_integration_test clients=2 requests=15 capacity=typed cancel_callbacks=1 zero_body=0 redirect_followed=0"

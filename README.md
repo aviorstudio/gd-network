@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: f6febc88ec21fdb219eea0c1506d00563fb21126bc0b6eeaee8ca56d66c6c03a -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: f20f98c327e44065521a3c32235c516a365e4b7af17d4ead847bb73d5a5314d3 -->
 
 # gd-network
 
@@ -73,7 +73,7 @@ HTTP failure bodies use `{error:{code,message,request_id}}`. These fields popula
 `HttpClientConfig` defaults to eight concurrent requests per client. A ninth
 request is rejected immediately with `capacity_exceeded`; a busy request is
 never canceled or reused. Request bodies are limited to 1 MiB, response bodies
-to 8 MiB, redirects to five, and retained error text to 1 KiB. Absolute HTTP
+to 8 MiB, and retained error text to 1 KiB. Absolute HTTP
 and HTTPS URLs are supported; relative endpoints require an HTTP(S) `base_url`.
 
 Every accepted request has a generation identity. Capacity, validation,
@@ -89,9 +89,7 @@ request; native requests disconnect stale completion signals before reuse.
 
 Native POST sets `Content-Length: 0` only on the Godot `HTTPRequest` path. Web POST omits the fetch body and does not set `Content-Length`, which browsers forbid.
 
-Web fetch uses `redirect: 'manual'`. A conforming browser exposes an opaque redirect, so the bridge does not follow it and does not send a second request. A visible cross-origin `Location` is also rejected. Native GET still follows redirects through Godot `HTTPRequest` and can resend `Authorization` to the redirect target, including another host. This release does not change that pre-existing native GET behavior.
-
-Added in addon version 0.0.4.
+Both native `HTTPRequest` and browser fetch reject redirects with `redirect_error`. A redirect never triggers a second request, so `Authorization` is never forwarded to another target.
 
 `WebSocketClientModule` uses 1 MiB inbound/outbound buffers, at most 64 queued
 packets, and rejects outbound UTF-8 text larger than 1 MiB.

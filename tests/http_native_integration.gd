@@ -74,15 +74,20 @@ func _on_oversize(result: Dictionary) -> void:
 	_phase = "redirect"
 	_phase_started_msec = Time.get_ticks_msec()
 	_client._config.max_response_body_bytes = 8 * 1024 * 1024
-	_client._config.max_redirects = 1
-	_client.get_json(_base_url + "/redirect/2", _on_redirect)
+	_client.get_json(_base_url + "/redirect-same", _on_redirect, PackedStringArray(["Authorization: Bearer native-redirect-secret"]))
 
 func _on_redirect(result: Dictionary) -> void:
-	if result.get("error_key") != HttpClientModule.ERROR_TOO_MANY_REDIRECTS:
-		_failures.append("Redirect chain above configured limit was not typed too_many_redirects")
+	if result.get("error_key") != HttpClientModule.ERROR_REDIRECT:
+		_failures.append("Same-origin redirect was not typed redirect_error")
+	_phase = "redirect-cross"
+	_phase_started_msec = Time.get_ticks_msec()
+	_client.get_json(_base_url + "/redirect-cross", _on_redirect_cross, PackedStringArray(["Authorization: Bearer native-redirect-secret"]))
+
+func _on_redirect_cross(result: Dictionary) -> void:
+	if result.get("error_key") != HttpClientModule.ERROR_REDIRECT:
+		_failures.append("Cross-origin redirect was not typed redirect_error")
 	_phase = "reuse"
 	_phase_started_msec = Time.get_ticks_msec()
-	_client._config.max_redirects = 5
 	_client.get_json(_base_url + "/payload/reused", _on_reuse)
 
 func _on_reuse(result: Dictionary) -> void:
