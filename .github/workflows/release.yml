@@ -1,5 +1,6 @@
 # Generated cookbook caller. Change recipe data and regenerate.
 name: Release
+run-name: "Release · ${{ inputs['retry-tag'] || inputs.bump }}"
 'on':
   workflow_dispatch:
     inputs:
@@ -22,13 +23,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    uses: nicodes/cookbook/.github/workflows/cookbook-addon-release-apikey.yml@3c4bdc54c92aa5db1c26b8ea9e0e38cc43dbe12c
+    uses: nicodes/cookbook/.github/workflows/cookbook-addon-release-apikey.yml@f1c6a5d224776bcee5128a8ce91392483af22566
     permissions:
       contents: write
       actions: read
       pull-requests: read
     with:
-      cookbook-ref: 3c4bdc54c92aa5db1c26b8ea9e0e38cc43dbe12c
+      cookbook-ref: f1c6a5d224776bcee5128a8ce91392483af22566
       mode: release
       bump: ${{ inputs.bump }}
       retry-tag: ${{ inputs['retry-tag'] }}
